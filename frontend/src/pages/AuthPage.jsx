@@ -14,7 +14,16 @@ const AuthPage = ({ setAuth }) => {
   const navigate = useNavigate();
   const { showToast } = useContext(ToastContext);
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === 'true') {
+      showToast('Your session has expired. Please log in again.', 'error');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [showToast]);
+
   const handleSubmit = async (e) => {
+
     e.preventDefault();
     setLoading(true);
 
