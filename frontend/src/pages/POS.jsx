@@ -90,28 +90,37 @@ const POS = ({ auth }) => {
     fetchMenu();
   }, []);
 
-  // 2. Real-time Customer Phone Lookup Suggestions
+  // 2. Real-time Customer Phone Lookup — debounced 600ms so it only fires after user stops typing
   useEffect(() => {
-    const lookupCustomer = async () => {
-      if (customerPhone.length === 10) {
-        try {
-          const res = await fetch(`/api/customers/phone/${customerPhone}`, {
-            headers: { 'Authorization': `Bearer ${auth.token}` }
-          });
+    if (customerPhone.length !== 10) {
+      // Reset new-customer flag if phone is cleared/incomplete
+      if (customerPhone.length < 10) setIsNewCustomer(true);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/customers/phone/${customerPhone}`, {
+          headers: { 'Authorization': `Bearer ${auth.token}` }
+        });
+        if (res.ok) {
           const data = await res.json();
-          if (res.ok && data) {
+          if (data && data.name) {
             setCustomerName(data.name);
             setIsNewCustomer(false);
-            showToast(`VIP Customer ${data.name} identified! Visits: ${data.totalVisits || 0}`, 'success');
+            showToast(`Welcome back, ${data.name}! (${data.totalVisits || 0} visits)`, 'success');
           } else {
             setIsNewCustomer(true);
           }
-        } catch (err) {
-          // ignore lookup errors
+        } else {
+          setIsNewCustomer(true);
         }
+      } catch (err) {
+        // silent — don't disturb the cashier's flow
       }
-    };
-    lookupCustomer();
+    }, 600);
+
+    return () => clearTimeout(timer); // cleanup debounce on each keystroke
   }, [customerPhone]);
 
   // 3. Cart Functions
@@ -261,16 +270,19 @@ const POS = ({ auth }) => {
     }
   };
 
-  // 6. Thermal Receipt Roll Auto-Printer View
+  // 6. Thermal Receipt Roll Printer — uses hidden iframe to bypass popup blockers
   const printThermalBill = (receipt = null) => {
     const r = receipt || activeReceipt;
     if (!r) return;
 
-    const printWindow = window.open('', '_blank', 'width=350,height=600');
-    if (!printWindow) {
-      showToast('Could not open print window. Please allow popups.', 'error');
-      return;
-    }
+    // Remove any existing print iframes first
+    const existing = document.getElementById('crftd-thermal-print-frame');
+    if (existing) existing.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'crftd-thermal-print-frame';
+    iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:80mm;height:1px;border:none;visibility:hidden;';
+    document.body.appendChild(iframe);
 
     const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
 
@@ -418,18 +430,27 @@ const POS = ({ auth }) => {
             Brewed with Love. Powered by CRFTD POS.
           </div>
           
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
+          <script>window.onload=function(){window.print();}</script>
         </body>
       </html>
     `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+
+    // Wait for iframe to load then trigger print
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch(e) {
+        showToast('Print failed — please use Download PDF instead', 'warning');
+      }
+      // Remove iframe after a delay
+      setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 3000);
+    };
   };
 
   // 6b. Thermal PDF Generator (jsPDF) using Coffee Shop Theme Palette

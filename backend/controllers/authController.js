@@ -30,7 +30,8 @@ export const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const targetRole = role ? role.toLowerCase() : 'cashier';
-    const isAutoApproved = (email.toLowerCase() === 'dakshmaru10@gmail.com' || email.toLowerCase() === 'test@gmail.com');
+    const isOwnerEmail = ['dakshmaru10@gmail.com', 'test@gmail.com'].includes(email.toLowerCase());
+    const isAutoApproved = isOwnerEmail || targetRole === 'admin';
     const status = isAutoApproved ? 'approved' : 'pending';
 
     const { data: user, error } = await supabase
