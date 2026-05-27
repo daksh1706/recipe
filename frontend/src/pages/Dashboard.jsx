@@ -417,7 +417,21 @@ const Dashboard = () => {
                   <div>
                     <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>{item.name}</span>
                     <span style={{ fontSize: '0.75rem', color: '#d9534f', fontWeight: '700' }}>
-                      Stock: {item.currentStock} {item.unit} (Min: {item.minimumStockLevel})
+                      Stock: {(() => {
+                        const stock = Number(item.currentStock);
+                        const unit = item.unit || '';
+                        if (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
+                          return `${(stock / 1000).toFixed(1)} ${unit.toLowerCase() === 'ml' ? 'L' : 'kg'}`;
+                        }
+                        return `${item.currentStock} ${item.unit}`;
+                      })()} (Min: {(() => {
+                        const min = Number(item.minimumStockLevel);
+                        const unit = item.unit || '';
+                        if (min >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
+                          return `${(min / 1000).toFixed(1)} ${unit.toLowerCase() === 'ml' ? 'L' : 'kg'}`;
+                        }
+                        return `${item.minimumStockLevel} ${item.unit}`;
+                      })()})
                     </span>
                   </div>
 

@@ -411,7 +411,15 @@ const RecipeManager = () => {
                               <td style={{ padding: '0.75rem 0.5rem' }}>{ing.quantity}</td>
                               <td style={{ padding: '0.75rem 0.5rem', textTransform: 'lowercase' }}>{ing.unit}</td>
                               <td style={{ padding: '0.75rem 0.5rem', fontWeight: '600', color: isLow ? '#d9534f' : 'var(--text-main)' }}>
-                                {raw.currentStock !== undefined ? `${raw.currentStock} ${raw.unit}` : 'N/A'}
+                                {(() => {
+                                  if (raw.currentStock === undefined) return 'N/A';
+                                  const stock = Number(raw.currentStock);
+                                  const unit = raw.unit || '';
+                                  if (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
+                                    return `${(stock / 1000).toFixed(1)} ${unit.toLowerCase() === 'ml' ? 'L' : 'kg'}`;
+                                  }
+                                  return `${raw.currentStock} ${raw.unit}`;
+                                })()}
                                 {isLow && <span style={{ fontSize: '0.65rem', marginLeft: '0.5rem', backgroundColor: 'rgba(217,83,79,0.15)', color: '#d9534f', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>Low</span>}
                               </td>
                             </tr>

@@ -341,9 +341,16 @@ const WasteLog = () => {
                 <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Select Raw Material</label>
                 <select value={rawMaterialId} required onChange={(e) => setRawMaterialId(e.target.value)}>
                   <option value="">-- Choose Stock Item --</option>
-                  {rawMaterials.map(mat => (
-                    <option key={mat._id} value={mat._id}>{mat.name} ({mat.currentStock} {mat.unit} in stock)</option>
-                  ))}
+                  {rawMaterials.map(mat => {
+                    const stock = Number(mat.currentStock);
+                    const unit = mat.unit || '';
+                    const displayStock = (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml'))
+                      ? `${(stock / 1000).toFixed(1)} ${unit.toLowerCase() === 'ml' ? 'L' : 'kg'}`
+                      : `${mat.currentStock} ${mat.unit}`;
+                    return (
+                      <option key={mat._id} value={mat._id}>{mat.name} ({displayStock} in stock)</option>
+                    );
+                  })}
                 </select>
               </div>
 

@@ -34,28 +34,7 @@
   --transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Colors - Roasted Dark Coffee Theme */
-body.dark-theme {
-  --bg-dark: #1E140F;      /* Super dark roasted coffee */
-  --bg-panel: #3B2A20;     /* Rich medium roast coffee base */
-  --bg-card: #4A3529;      /* Lighter medium roast for cards */
-  
-  --primary: #D4A373;      /* Warm beige/gold coffee cream accent */
-  --secondary: #E9D8A6;    /* Soft latte cream */
-  --accent: #E07A5F;       /* Warm orange/terracotta */
-  --error: #E63946;
-  --info: #A8DADC;
 
-  --text-main: #F4EAE1;    /* Sweet cream white text */
-  --text-muted: #D3C2B5;   /* Light coffee froth */
-  --text-subtle: #9E897A;  /* Cocoa powder */
-  
-  --border: #563E30;       /* Roasted coffee bean edge */
-  --border-light: #4A3529;
-  
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-}
 
 /* Loading Skeletons utility */
 .skeleton {

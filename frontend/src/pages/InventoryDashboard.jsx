@@ -439,7 +439,18 @@ const InventoryDashboard = ({ userRole }) => {
                         <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-subtle)', fontSize: '0.75rem', fontWeight: '700' }}>{m.itemCode}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', fontSize: '0.85rem' }}>{m.name}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', textTransform: 'capitalize' }}>{m.category.replace('_', ' ')}</td>
-                        <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>{m.currentStock} {m.unit}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>
+                          {(() => {
+                            const stock = Number(m.currentStock);
+                            const unit = m.unit || '';
+                            if (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
+                              const convertedVal = (stock / 1000).toFixed(1);
+                              const convertedUnit = unit.toLowerCase() === 'ml' ? 'L' : 'kg';
+                              return `${convertedVal} ${convertedUnit}`;
+                            }
+                            return `${m.currentStock} ${m.unit}`;
+                          })()}
+                        </td>
                         <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem' }}>₹{Number(m.costPerUnit).toFixed(2)}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', color: 'var(--primary)' }}>₹{m.totalValue?.toFixed(1)}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{m.supplier ? m.supplier.name : 'None'}</td>
@@ -526,7 +537,17 @@ const InventoryDashboard = ({ userRole }) => {
                     </td>
 
                     <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700' }}>
-                      {tx.transaction_type === 'deduction' || tx.transaction_type === 'waste' ? '-' : '+'}{tx.quantity} {tx.rawMaterial?.unit}
+                      {tx.transaction_type === 'deduction' || tx.transaction_type === 'waste' ? '-' : '+'}
+                      {(() => {
+                        const qty = Number(tx.quantity);
+                        const unit = tx.rawMaterial?.unit || '';
+                        if (qty >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
+                          const convertedVal = (qty / 1000).toFixed(1);
+                          const convertedUnit = unit.toLowerCase() === 'ml' ? 'L' : 'kg';
+                          return `${convertedVal} ${convertedUnit}`;
+                        }
+                        return `${tx.quantity} ${unit}`;
+                      })()}
                     </td>
 
                     <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{tx.notes || 'N/A'}</td>

@@ -189,8 +189,8 @@ const POS = ({ auth }) => {
   const totals = calculateCart();
 
   // 5. Place POS Order Checkouts
-  const handleCheckout = async (e) => {
-    e.preventDefault();
+  const handleCheckout = async (e, autoPrint = false) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (cart.length === 0) {
       showToast('Cart is empty', 'warning');
       return;
@@ -245,6 +245,12 @@ const POS = ({ auth }) => {
         setDiscountPercent(0);
         setAmountReceived('');
         setNotes('');
+
+        if (autoPrint) {
+          setTimeout(() => {
+            printThermalBill(data);
+          }, 100);
+        }
       } else {
         showToast(data.message || 'Checkout failed', 'error');
       }
@@ -255,7 +261,168 @@ const POS = ({ auth }) => {
     }
   };
 
-  // 6. Thermal PDF Generator (jsPDF) using Coffee Shop Theme Palette
+  // 6. Thermal Receipt Roll Auto-Printer View
+  const printThermalBill = (receipt = null) => {
+    const r = receipt || activeReceipt;
+    if (!r) return;
+
+    const printWindow = window.open('', '_blank', 'width=350,height=600');
+    if (!printWindow) {
+      showToast('Could not open print window. Please allow popups.', 'error');
+      return;
+    }
+
+    const itemsHtml = r.items.map(item => {
+      const name = item.menuItem ? item.menuItem.name : 'Coffee Item';
+      const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
+      const price = Number(item.unitPrice || item.price || 0).toFixed(2);
+      const total = Number(item.subtotal || (item.quantity * (item.unitPrice || item.price || 0))).toFixed(2);
+      return `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+          <div style="width: 50%;">${displayName}</div>
+          <div style="width: 10%; text-align: center;">${item.quantity}</div>
+          <div style="width: 20%; text-align: right;">${price}</div>
+          <div style="width: 20%; text-align: right;">${total}</div>
+        </div>
+      `;
+    }).join('');
+
+    const discountRow = Number(r.discountAmount) > 0 ? `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span>Discount (${r.discountPercent}%):</span>
+        <span>-₹${Number(r.discountAmount).toFixed(2)}</span>
+      </div>
+    ` : '';
+
+    const cashRow = r.paymentMethod === 'cash' ? `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span>Received:</span>
+        <span>₹${Number(r.amountReceived || r.grandTotal).toFixed(2)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+        <span>Change:</span>
+        <span>₹${Number(r.changeToReturn || 0).toFixed(2)}</span>
+      </div>
+    ` : '';
+
+    const customerRow = r.customer ? `
+      <div style="margin-bottom: 4px;">Guest: ${r.customer.name} (${r.customer.phone})</div>
+    ` : (r.customerPhone ? `<div style="margin-bottom: 4px;">Guest: ${r.customerName || 'Walk-in'} (${r.customerPhone})</div>` : '');
+
+    const tableRow = r.tableNumber ? `
+      <span>Table: #${r.tableNumber}</span>
+    ` : '';
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Thermal Bill - ${r.orderCode}</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            body {
+              width: 74mm;
+              margin: 0 auto;
+              padding: 5mm 2mm;
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 11px;
+              color: #000;
+              background: #fff;
+            }
+            .center { text-align: center; }
+            .divider { border-top: 1px dashed #000; margin: 5px 0; }
+            .bold { font-weight: bold; }
+            .header-title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+          </style>
+        </head>
+        <body>
+          <div class="center">
+            <div class="header-title">CRFTD COFFEE SHOP</div>
+            <div style="font-size: 9px; margin-bottom: 2px;">101 Gourmet Lane, Coffee Hills, IN</div>
+            <div style="font-size: 9px; margin-bottom: 2px;">Phone: +91 98765 43210</div>
+            <div style="font-size: 9px;">GSTIN: 29AAAAA1111A1Z1</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div style="font-size: 10px; margin-bottom: 3px;">
+            <div class="bold">Order: ${r.orderCode}</div>
+            <div>Date: ${new Date(r.createdAt || Date.now()).toLocaleString()}</div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Type: ${(r.orderType || 'takeaway').toUpperCase()}</span>
+              ${tableRow}
+            </div>
+            ${customerRow}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 4px;">
+            <div style="width: 50%;">Item</div>
+            <div style="width: 10%; text-align: center;">Qty</div>
+            <div style="width: 20%; text-align: right;">Price</div>
+            <div style="width: 20%; text-align: right;">Total</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          ${itemsHtml}
+          
+          <div class="divider"></div>
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+            <span>Subtotal:</span>
+            <span>₹${Number(r.subtotal).toFixed(2)}</span>
+          </div>
+          
+          ${discountRow}
+          
+          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+            <span>GST (5%):</span>
+            <span>₹${Number(r.gstAmount || r.gstTotal || (r.subtotal * 0.05)).toFixed(2)}</span>
+          </div>
+          
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 4px; margin-bottom: 4px;">
+            <span>GRAND TOTAL:</span>
+            <span>₹${Number(r.grandTotal).toFixed(2)}</span>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div style="font-size: 10px; margin-bottom: 4px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+              <span>Payment:</span>
+              <span class="bold">${(r.paymentMethod || 'cash').toUpperCase()} (${(r.paymentStatus || 'paid').toUpperCase()})</span>
+            </div>
+            ${cashRow}
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center" style="font-size: 10px; font-weight: bold; margin-top: 10px; margin-bottom: 2px;">
+            THANK YOU FOR YOUR VISIT!
+          </div>
+          <div class="center" style="font-size: 8px;">
+            Brewed with Love. Powered by CRFTD POS.
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  // 6b. Thermal PDF Generator (jsPDF) using Coffee Shop Theme Palette
   const generatePDF = () => {
     if (!activeReceipt) return;
     const r = activeReceipt;
@@ -720,15 +887,27 @@ const POS = ({ auth }) => {
               </div>
             </div>
 
-            {/* Submit checkout buttons */}
-            <button 
-              type="submit" 
-              className="btn btn-primary" 
-              style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)', fontSize: '0.9rem', justifyContent: 'center' }}
-              disabled={checkoutLoading || cart.length === 0}
-            >
-              {checkoutLoading ? 'Processing...' : 'Place POS Order'}
-            </button>
+            {/* Submit checkout buttons in grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <button 
+                type="submit" 
+                className="btn btn-secondary" 
+                style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', justifyContent: 'center', borderColor: 'var(--primary)', color: 'var(--primary)', fontWeight: '700' }}
+                disabled={checkoutLoading || cart.length === 0}
+              >
+                {checkoutLoading ? '...' : 'Place Order'}
+              </button>
+              
+              <button 
+                type="button" 
+                onClick={() => handleCheckout(null, true)}
+                className="btn btn-primary" 
+                style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', justifyContent: 'center', fontWeight: '700' }}
+                disabled={checkoutLoading || cart.length === 0}
+              >
+                {checkoutLoading ? '...' : 'Generate & Print'}
+              </button>
+            </div>
           </form>
 
         </div>
@@ -816,7 +995,7 @@ const POS = ({ auth }) => {
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                 <button 
-                  onClick={() => { window.print(); }}
+                  onClick={() => printThermalBill(activeReceipt)}
                   className="btn btn-secondary"
                   style={{ height: '2.5rem', fontSize: '0.85rem' }}
                 >

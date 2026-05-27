@@ -321,7 +321,14 @@ const Suppliers = () => {
 
                       <div style={{ textAlign: 'right' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>
-                          {item.currentStock} {item.unit}
+                          {(() => {
+                            const stock = Number(item.currentStock);
+                            const unit = item.unit || '';
+                            if (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
+                              return `${(stock / 1000).toFixed(1)} ${unit.toLowerCase() === 'ml' ? 'L' : 'kg'}`;
+                            }
+                            return `${item.currentStock} ${item.unit}`;
+                          })()}
                         </span>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Cost: ₹{item.costPerUnit}/{item.unit}</span>
                       </div>

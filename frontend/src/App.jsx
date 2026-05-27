@@ -79,26 +79,17 @@ function AppInner() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
-  });
+  const [darkMode, setDarkMode] = useState(false);
 
   const [toast, setToast] = useState(null);
 
-  // Persistent Dark Mode Theme Injector
+  // Enforce Light Theme Mode strictly
   useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark-theme');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-theme');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
-
-  const toggleTheme = useCallback(() => {
-    setDarkMode(prev => !prev);
+    document.body.classList.remove('dark-theme');
+    localStorage.setItem('theme', 'light');
   }, []);
+
+  const toggleTheme = useCallback(() => {}, []);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });

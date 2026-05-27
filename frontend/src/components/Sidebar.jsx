@@ -127,53 +127,13 @@ const Sidebar = ({ setAuth, role, auth, handleLogout }) => {
           })}
         </nav>
 
-        {/* Theme and Profile Footer */}
+        {/* Profile Footer */}
         <div style={{ 
           borderTop: '1px solid var(--border)', 
           padding: '1.25rem', 
           backgroundColor: 'var(--border-light)',
           flexShrink: 0
         }}>
-          {/* Theme Mode Toggle Button */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            marginBottom: '1rem',
-            paddingBottom: '1rem',
-            borderBottom: '1px dashed var(--border)'
-          }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-muted)' }}>Theme Mode</span>
-            <button 
-              onClick={toggleTheme} 
-              style={{
-                background: 'var(--bg-panel)',
-                border: '1px solid var(--border)',
-                borderRadius: '30px',
-                padding: '0.35rem 0.85rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                color: 'var(--text-main)',
-                fontSize: '0.8rem',
-                fontWeight: '700',
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'var(--transition)'
-              }}
-            >
-              {darkMode ? (
-                <>
-                  <Sun size={14} color="#f0ad4e" /> Light
-                </>
-              ) : (
-                <>
-                  <Moon size={14} color="#8C6239" /> Dark
-                </>
-              )}
-            </button>
-          </div>
-
           {/* User Account Info */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
