@@ -4,6 +4,43 @@ import {
   Package, Plus, Edit, Trash2, Calendar, FileText, X, AlertTriangle, ArrowRight, DollarSign, Filter, RefreshCw
 } from 'lucide-react';
 
+const generatePrefix = (categoryStr) => {
+  if (!categoryStr) return 'XX';
+  const clean = categoryStr.replace(/_/g, ' ').replace(/[^a-zA-Z\s]/g, '').trim();
+  const words = clean.split(/\s+/).filter(w => w.length > 0);
+  if (words.length >= 2) {
+    return words.map(w => w[0].toUpperCase()).join('');
+  } else if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return 'XX';
+};
+
+const generateNextCode = (cat, itemsList) => {
+  const prefix = generatePrefix(cat);
+  const regex = new RegExp(`^${prefix}-(\\d{3,})$`);
+  let maxNum = 0;
+  
+  if (itemsList && Array.isArray(itemsList)) {
+    itemsList.forEach(item => {
+      if (item.category === cat) {
+        const code = item.itemCode || item.item_code || '';
+        const match = code.toUpperCase().match(regex);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    });
+  }
+  
+  const nextNum = maxNum + 1;
+  const formattedNum = nextNum.toString().padStart(3, '0');
+  return `${prefix}-${formattedNum}`;
+};
+
 const InventoryDashboard = ({ userRole }) => {
   const { showToast } = useContext(ToastContext);
   const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
@@ -22,17 +59,24 @@ const InventoryDashboard = ({ userRole }) => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // Modals States
+  // Form Modal States
   const [showFormModal, setShowFormModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [editId, setEditId] = useState(null);
   const [restockId, setRestockId] = useState(null);
   const [restockItemName, setRestockItemName] = useState('');
 
-  // Form Fields (CRUD raw material)
+  // Form Fields
   const [itemCode, setItemCode] = useState('');
   const [name, setName] = useState('');
   const [category, setCategory] = useState('coffee_beans');
+
+  // Auto-generate code on Category Change
+  const handleCategoryChange = (newCat) => {
+    setCategory(newCat);
+    const nextCode = generateNextCode(newCat, rawMaterials);
+    setItemCode(nextCode);
+  };
   const [unit, setUnit] = useState('g');
   const [currentStock, setCurrentStock] = useState('');
   const [minimumStockLevel, setMinimumStockLevel] = useState('');
@@ -137,9 +181,10 @@ const InventoryDashboard = ({ userRole }) => {
       setExpiryDate(m.expiryDate ? m.expiryDate.split('T')[0] : '');
     } else {
       setEditId(null);
-      setItemCode(`RM-${Math.random().toString(36).substring(2, 7).toUpperCase()}`);
       setName('');
       setCategory('coffee_beans');
+      const nextCode = generateNextCode('coffee_beans', rawMaterials);
+      setItemCode(nextCode);
       setUnit('g');
       setCurrentStock('');
       setMinimumStockLevel('');
@@ -594,7 +639,7 @@ const InventoryDashboard = ({ userRole }) => {
                 
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Category Segment</label>
-                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <select value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
                     {categories.map(c => (
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}

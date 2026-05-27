@@ -5,6 +5,43 @@ import {
   Plus, Edit, Trash2, X, Upload, Coffee, Search, Grid, List, CheckCircle, HelpCircle, Eye, EyeOff
 } from 'lucide-react';
 
+const generatePrefix = (categoryStr) => {
+  if (!categoryStr) return 'XX';
+  const clean = categoryStr.replace(/_/g, ' ').replace(/[^a-zA-Z\s]/g, '').trim();
+  const words = clean.split(/\s+/).filter(w => w.length > 0);
+  if (words.length >= 2) {
+    return words.map(w => w[0].toUpperCase()).join('');
+  } else if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return 'XX';
+};
+
+const generateNextCode = (cat, itemsList) => {
+  const prefix = generatePrefix(cat);
+  const regex = new RegExp(`^${prefix}-(\\d{3,})$`);
+  let maxNum = 0;
+  
+  if (itemsList && Array.isArray(itemsList)) {
+    itemsList.forEach(item => {
+      if (item.category === cat) {
+        const code = item.itemCode || item.item_code || '';
+        const match = code.toUpperCase().match(regex);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    });
+  }
+  
+  const nextNum = maxNum + 1;
+  const formattedNum = nextNum.toString().padStart(3, '0');
+  return `${prefix}-${formattedNum}`;
+};
+
 const MenuManager = () => {
   const { showToast } = useContext(ToastContext);
   const navigate = useNavigate();
@@ -43,17 +80,19 @@ const MenuManager = () => {
     { value: 'savoury_bites', label: 'Savoury Bites' }
   ];
 
-  const fetchMenu = async () => {
+  // Auto-generate code on Category Change
+  const handleCategoryChange = (newCat) => {
+    setCategory(newCat);
+    const nextCode = generateNextCode(newCat, menuItems);
+    setItemCode(nextCode);
+  };
+
+  const fetchMenuItems = async () => {
     try {
-      const res = await fetch('/api/menu', {
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
+      const res = await fetch('/api/menu');
+      if (!res.ok) throw new Error('Failed to load menu');
       const data = await res.json();
-      if (res.ok) {
-        setMenuItems(data);
-      } else {
-        showToast(data.message || 'Failed to fetch menu items', 'error');
-      }
+      setMenuItems(data);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -62,29 +101,33 @@ const MenuManager = () => {
   };
 
   useEffect(() => {
-    fetchMenu();
+    fetchMenuItems();
   }, []);
 
-  // Toggle availability instantly (Optimistic UI updates)
-  const handleToggleAvailability = async (item) => {
-    const updatedStatus = !item.isAvailable;
-    
-    // Optimistic state update
-    setMenuItems(prev => prev.map(m => m._id === item._id ? { ...m, isAvailable: updatedStatus } : m));
+  // Delete flow
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this menu product? This will purge recipe associations!')) return;
+    try {
+      const res = await fetch(`/api/menu/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Deletion failed');
+      setMenuItems(prev => prev.filter(m => m._id !== id));
+      showToast('Menu product successfully deleted!');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
+  // Availability toggle
+  const toggleAvailability = async (item) => {
+    const updatedStatus = !item.isAvailable;
+    setMenuItems(prev => prev.map(m => m._id === item._id ? { ...m, isAvailable: updatedStatus } : m));
     try {
       const res = await fetch(`/api/menu/${item._id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${auth.token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAvailable: updatedStatus })
       });
-      if (res.ok) {
-        showToast(`${item.name} is now ${updatedStatus ? 'Available' : 'Unavailable'}`, 'success');
-      } else {
-        // Rollback on failure
+      if (!res.ok) {
         setMenuItems(prev => prev.map(m => m._id === item._id ? { ...m, isAvailable: !updatedStatus } : m));
         const err = await res.json();
         showToast(err.message || 'Status toggle failed', 'error');
@@ -99,7 +142,7 @@ const MenuManager = () => {
   const handleOpenModal = (item = null) => {
     if (item) {
       setEditItem(item);
-      setItemCode(item.itemCode || '');
+      setItemCode(item.itemCode || item.item_code || '');
       setName(item.name);
       setDescription(item.description || '');
       setCategory(item.category);
@@ -109,10 +152,11 @@ const MenuManager = () => {
       setImageUrl(item.imageUrl || '');
     } else {
       setEditItem(null);
-      setItemCode(`MENU-${Math.random().toString(36).substring(2, 7).toUpperCase()}`);
       setName('');
       setDescription('');
       setCategory('hot_coffee');
+      const nextCode = generateNextCode('hot_coffee', menuItems);
+      setItemCode(nextCode);
       setPrice('');
       setGstPercent(5.0);
       setIsAvailable(true);
@@ -469,7 +513,7 @@ const MenuManager = () => {
                 
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Category Classification</label>
-                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <select value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
                     <option value="hot_coffee">Hot Coffee</option>
                     <option value="cold_coffee">Cold Coffee</option>
                     <option value="frappuccino">Frappuccino</option>
