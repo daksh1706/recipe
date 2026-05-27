@@ -17,6 +17,61 @@ const generateOrderCode = async () => {
   }
 };
 
+const getConversionFactor = (unit) => {
+  if (!unit) return 1;
+  const u = unit.toLowerCase();
+  if (u === 'ml') return 1;
+  if (u === 'l' || u === 'liter' || u === 'liters') return 1000;
+  if (u === 'g' || u === 'gm' || u === 'gram' || u === 'grams') return 1;
+  if (u === 'kg' || u === 'kilogram' || u === 'kilograms') return 1000;
+  if (u === 'tsp') return 5;
+  if (u === 'tbsp') return 15;
+  if (u === 'cup') return 240;
+  if (u === 'pinch') return 0.36;
+  return 1;
+};
+
+const getBaseUnitType = (unit) => {
+  if (!unit) return 'other';
+  const u = unit.toLowerCase();
+  if (['ml', 'l', 'tsp', 'tbsp', 'cup'].includes(u)) return 'volume';
+  if (['g', 'gm', 'kg', 'pinch'].includes(u)) return 'weight';
+  return 'other';
+};
+
+const calculateDeductionQuantity = (recipeQty, recipeUnit, rawMaterial) => {
+  if (!rawMaterial) return recipeQty;
+  const rawUnit = rawMaterial.unit ? rawMaterial.unit.toLowerCase() : '';
+  
+  if (['bottle', 'pouch', 'pack'].includes(rawUnit)) {
+    const packQty = Number(rawMaterial.quantity_per_pack || 1);
+    const packUnit = rawMaterial.pack_capacity_unit ? rawMaterial.pack_capacity_unit.toLowerCase() : 'ml';
+    
+    const recipeBaseFactor = getConversionFactor(recipeUnit);
+    const packBaseFactor = getConversionFactor(packUnit);
+    
+    const recipeQtyInBase = recipeQty * recipeBaseFactor;
+    const packCapacityInBase = packQty * packBaseFactor;
+    
+    if (packCapacityInBase > 0) {
+      return recipeQtyInBase / packCapacityInBase;
+    }
+  } else {
+    // Standard compatible conversion
+    const recipeBaseFactor = getConversionFactor(recipeUnit);
+    const rawBaseFactor = getConversionFactor(rawUnit);
+    
+    const recipeType = getBaseUnitType(recipeUnit);
+    const rawType = getBaseUnitType(rawUnit);
+    
+    if (recipeType === rawType && recipeType !== 'other') {
+      const qtyInBase = recipeQty * recipeBaseFactor;
+      return qtyInBase / rawBaseFactor;
+    }
+  }
+  return recipeQty;
+};
+
 // Checkout endpoint
 export const createOrder = async (req, res) => {
   const { 
@@ -93,7 +148,8 @@ export const createOrder = async (req, res) => {
       const recipe = menuItem.recipes && menuItem.recipes.length > 0 ? menuItem.recipes[0] : null;
       if (recipe && recipe.recipe_ingredients) {
         for (const ri of recipe.recipe_ingredients) {
-          const totalNeeded = Number(ri.quantity) * quantity;
+          const totalNeededRaw = Number(ri.quantity) * quantity;
+          const totalNeeded = calculateDeductionQuantity(totalNeededRaw, ri.unit, ri.raw_materials);
           stockDeductions.push({
             raw_material_id: ri.raw_material_id,
             quantity: totalNeeded,
@@ -384,7 +440,7 @@ export const updateOrderStatus = async (req, res) => {
           const recipe = menuItem.recipes[0];
           if (recipe.recipe_ingredients) {
             for (const ri of recipe.recipe_ingredients) {
-              const totalRestore = Number(ri.quantity) * Number(item.quantity);
+              const totalRestore = calculateDeductionQuantity(Number(ri.quantity) * Number(item.quantity), ri.unit, ri.raw_materials);
               
               if (ri.raw_materials) {
                 const current = Number(ri.raw_materials.current_stock || 0);

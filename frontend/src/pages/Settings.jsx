@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw } from 'lucide-react';
+import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { ToastContext } from '../App';
 
 // Sub-component: individual pending user approval card (needs own state for role select)
@@ -155,6 +155,14 @@ const Settings = ({ userRole = 'admin' }) => {
     role: 'cashier',
     phone: ''
   });
+  const [directUserForm, setDirectUserForm] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    role: 'cashier',
+    phone: ''
+  });
+  const [showDirectPassword, setShowDirectPassword] = useState(false);
 
   const getAuthToken = () => {
     const info = localStorage.getItem('userInfo');
@@ -372,6 +380,37 @@ const Settings = ({ userRole = 'admin' }) => {
       }
     } catch (err) {
       showToast('Error adding new staff member', 'error');
+    }
+  };
+
+  const handleDirectCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const token = getAuthToken();
+      const res = await fetch('/api/users/admin-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(directUserForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Team credentials created and approved successfully!', 'success');
+        setDirectUserForm({
+          full_name: '',
+          email: '',
+          password: '',
+          phone: '',
+          role: 'cashier'
+        });
+        fetchUsers();
+      } else {
+        showToast(data.message || 'Failed to create credentials', 'error');
+      }
+    } catch (err) {
+      showToast('Error creating team credentials', 'error');
     }
   };
 
@@ -658,6 +697,108 @@ const Settings = ({ userRole = 'admin' }) => {
                   <Save size={18} /> Save Details
                 </button>
               </form>
+
+              {userRole === 'admin' && (
+                <div style={{ marginTop: '3rem', paddingTop: '2.5rem', borderTop: '1px solid var(--border)' }}>
+                  <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <UserPlus size={20} color="var(--primary)" /> Add Team Credentials (Staff, Founder, Manager)
+                  </h2>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                    Directly register and auto-approve a new staff member, founder, or manager, bypassing the standard public access request approval queues.
+                  </p>
+                  
+                  <form onSubmit={handleDirectCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Full Name</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. Daksh Maru"
+                          value={directUserForm.full_name} 
+                          onChange={(e) => setDirectUserForm({...directUserForm, full_name: e.target.value})} 
+                          required 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Email Address</label>
+                        <input 
+                          type="email" 
+                          placeholder="e.g. staff@coffee.com"
+                          value={directUserForm.email} 
+                          onChange={(e) => setDirectUserForm({...directUserForm, email: e.target.value})} 
+                          required 
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Password</label>
+                        <div style={{ position: 'relative' }}>
+                          <input 
+                            type={showDirectPassword ? "text" : "password"} 
+                            placeholder="Password credentials"
+                            value={directUserForm.password} 
+                            onChange={(e) => setDirectUserForm({...directUserForm, password: e.target.value})} 
+                            style={{ width: '100%', paddingRight: '2.5rem' }}
+                            required 
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowDirectPassword(!showDirectPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: '0.75rem',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'var(--text-muted)'
+                            }}
+                          >
+                            {showDirectPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Phone Number</label>
+                        <input 
+                          type="text" 
+                          placeholder="e.g. 9876543210"
+                          value={directUserForm.phone} 
+                          onChange={(e) => setDirectUserForm({...directUserForm, phone: e.target.value})} 
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>System Role</label>
+                        <select 
+                          value={directUserForm.role}
+                          onChange={(e) => setDirectUserForm({...directUserForm, role: e.target.value})}
+                          required
+                        >
+                          <option value="admin">Admin (Full Access & Settings)</option>
+                          <option value="manager">Manager (Inventory, Staff & Supplies)</option>
+                          <option value="barista">Barista (POS, Orders & Recipes)</option>
+                          <option value="cashier">Cashier (POS & Billing Only)</option>
+                          <option value="waiter">Waiter (Order Servings)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start', padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <UserPlus size={18} /> Create & Approve Credentials
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           )}
 

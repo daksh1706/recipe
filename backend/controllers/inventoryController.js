@@ -37,7 +37,9 @@ export const getRawMaterials = async (req, res) => {
         lastRestockedAt: mat.last_restocked_at,
         createdAt: mat.created_at,
         status, // auto calculated
-        supplier: mat.supplier
+        supplier: mat.supplier,
+        quantityPerPack: mat.quantity_per_pack ? Number(mat.quantity_per_pack) : null,
+        packCapacityUnit: mat.pack_capacity_unit || null
       };
     });
 
@@ -49,7 +51,7 @@ export const getRawMaterials = async (req, res) => {
 
 // Add new raw material
 export const addRawMaterial = async (req, res) => {
-  const { itemCode, item_code, name, category, unit, currentStock, current_stock, minimumStockLevel, minimum_stock_level, reorderQuantity, reorder_quantity, costPerUnit, cost_per_unit, supplierId, supplier_id, storageLocation, storage_location, expiryDate, expiry_date } = req.body;
+  const { itemCode, item_code, name, category, unit, currentStock, current_stock, minimumStockLevel, minimum_stock_level, reorderQuantity, reorder_quantity, costPerUnit, cost_per_unit, supplierId, supplier_id, storageLocation, storage_location, expiryDate, expiry_date, quantityPerPack, quantity_per_pack, packCapacityUnit, pack_capacity_unit } = req.body;
 
   const finalCode = itemCode || item_code || `RM-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
   const finalStock = currentStock !== undefined ? currentStock : (current_stock !== undefined ? current_stock : 0.0);
@@ -59,6 +61,8 @@ export const addRawMaterial = async (req, res) => {
   const finalSupplier = supplierId || supplier_id || null;
   const finalLoc = storageLocation || storage_location || '';
   const finalExpiry = expiryDate || expiry_date || null;
+  const finalQtyPack = quantityPerPack !== undefined ? quantityPerPack : (quantity_per_pack !== undefined ? quantity_per_pack : null);
+  const finalPackCapUnit = packCapacityUnit !== undefined ? packCapacityUnit : (pack_capacity_unit !== undefined ? pack_capacity_unit : null);
 
   try {
     const { data: mat, error } = await supabase
@@ -75,6 +79,8 @@ export const addRawMaterial = async (req, res) => {
         supplier_id: finalSupplier,
         storage_location: finalLoc,
         expiry_date: finalExpiry,
+        quantity_per_pack: finalQtyPack ? Number(finalQtyPack) : null,
+        pack_capacity_unit: finalPackCapUnit,
         last_restocked_at: new Date().toISOString()
       })
       .select()
@@ -102,7 +108,9 @@ export const addRawMaterial = async (req, res) => {
       costPerUnit: mat.cost_per_unit,
       storageLocation: mat.storage_location,
       expiryDate: mat.expiry_date,
-      lastRestockedAt: mat.last_restocked_at
+      lastRestockedAt: mat.last_restocked_at,
+      quantityPerPack: mat.quantity_per_pack ? Number(mat.quantity_per_pack) : null,
+      packCapacityUnit: mat.pack_capacity_unit || null
     };
 
     if (req.io) {
@@ -118,7 +126,7 @@ export const addRawMaterial = async (req, res) => {
 // Update raw material details
 export const updateRawMaterial = async (req, res) => {
   const { id } = req.params;
-  const { itemCode, item_code, name, category, unit, currentStock, current_stock, minimumStockLevel, minimum_stock_level, reorderQuantity, reorder_quantity, costPerUnit, cost_per_unit, supplierId, supplier_id, storageLocation, storage_location, expiryDate, expiry_date } = req.body;
+  const { itemCode, item_code, name, category, unit, currentStock, current_stock, minimumStockLevel, minimum_stock_level, reorderQuantity, reorder_quantity, costPerUnit, cost_per_unit, supplierId, supplier_id, storageLocation, storage_location, expiryDate, expiry_date, quantityPerPack, quantity_per_pack, packCapacityUnit, pack_capacity_unit } = req.body;
 
   const updates = {};
   if (itemCode !== undefined) updates.item_code = itemCode;
@@ -149,6 +157,12 @@ export const updateRawMaterial = async (req, res) => {
   if (expiryDate !== undefined) updates.expiry_date = expiryDate;
   else if (expiry_date !== undefined) updates.expiry_date = expiry_date;
 
+  if (quantityPerPack !== undefined) updates.quantity_per_pack = quantityPerPack ? Number(quantityPerPack) : null;
+  else if (quantity_per_pack !== undefined) updates.quantity_per_pack = quantity_per_pack ? Number(quantity_per_pack) : null;
+
+  if (packCapacityUnit !== undefined) updates.pack_capacity_unit = packCapacityUnit || null;
+  else if (pack_capacity_unit !== undefined) updates.pack_capacity_unit = pack_capacity_unit || null;
+
   try {
     const { data: mat, error } = await supabase
       .from('raw_materials')
@@ -169,7 +183,9 @@ export const updateRawMaterial = async (req, res) => {
       costPerUnit: mat.cost_per_unit,
       storageLocation: mat.storage_location,
       expiryDate: mat.expiry_date,
-      lastRestockedAt: mat.last_restocked_at
+      lastRestockedAt: mat.last_restocked_at,
+      quantityPerPack: mat.quantity_per_pack ? Number(mat.quantity_per_pack) : null,
+      packCapacityUnit: mat.pack_capacity_unit || null
     };
 
     if (req.io) {
@@ -209,17 +225,21 @@ export const deleteRawMaterial = async (req, res) => {
 // Restock an existing raw material
 export const restockRawMaterial = async (req, res) => {
   const { id } = req.params;
-  const { quantity, notes } = req.body;
+  const { quantity, totalCost, total_cost, reorderQuantity, reorder_quantity, notes } = req.body;
 
-  if (!quantity || Number(quantity) <= 0) {
+  const finalQty = Number(quantity);
+  const finalTotalCost = totalCost !== undefined ? Number(totalCost) : (total_cost !== undefined ? Number(total_cost) : null);
+  const finalReorder = reorderQuantity !== undefined ? Number(reorderQuantity) : (reorder_quantity !== undefined ? Number(reorder_quantity) : null);
+
+  if (!quantity || finalQty <= 0) {
     return res.status(400).json({ message: 'Invalid restock quantity. Must be greater than 0.' });
   }
 
   try {
-    // Fetch current stock
+    // Fetch current stock, cost_per_unit, reorder_quantity
     const { data: currentMat, error: fetchErr } = await supabase
       .from('raw_materials')
-      .select('current_stock')
+      .select('current_stock, cost_per_unit, reorder_quantity, name, unit, quantity_per_pack, pack_capacity_unit')
       .eq('id', id)
       .single();
 
@@ -227,15 +247,31 @@ export const restockRawMaterial = async (req, res) => {
       return res.status(404).json({ message: 'Raw material not found' });
     }
 
-    const newStock = Number(currentMat.current_stock || 0) + Number(quantity);
+    const currentStock = Number(currentMat.current_stock || 0);
+    const newStock = currentStock + finalQty;
+
+    const updates = {
+      current_stock: newStock,
+      last_restocked_at: new Date().toISOString()
+    };
+
+    // If next reorder alert quantity is provided, update it
+    if (finalReorder !== null) {
+      updates.reorder_quantity = finalReorder;
+    }
+
+    // If total cost of batch is provided, update the moving average cost per unit
+    if (finalTotalCost !== null && finalTotalCost > 0) {
+      const oldCost = Number(currentMat.cost_per_unit || 0);
+      // Weighted average formula: (stock * oldCost + batchTotalCost) / (stock + restockQty)
+      const calculatedCost = (currentStock * oldCost + finalTotalCost) / (currentStock + finalQty);
+      updates.cost_per_unit = Number(calculatedCost.toFixed(4));
+    }
 
     // Update stock and last_restocked_at
     const { data: mat, error: updateErr } = await supabase
       .from('raw_materials')
-      .update({
-        current_stock: newStock,
-        last_restocked_at: new Date().toISOString()
-      })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();
@@ -246,8 +282,8 @@ export const restockRawMaterial = async (req, res) => {
     await supabase.from('stock_transactions').insert({
       raw_material_id: id,
       transaction_type: 'restock',
-      quantity: Number(quantity),
-      notes: notes || 'Manual restock intake'
+      quantity: finalQty,
+      notes: notes || `Manual restock intake. Total Cost: ₹${finalTotalCost || 'N/A'}`
     });
 
     const responseItem = {
@@ -260,7 +296,9 @@ export const restockRawMaterial = async (req, res) => {
       costPerUnit: mat.cost_per_unit,
       storageLocation: mat.storage_location,
       expiryDate: mat.expiry_date,
-      lastRestockedAt: mat.last_restocked_at
+      lastRestockedAt: mat.last_restocked_at,
+      quantityPerPack: mat.quantity_per_pack ? Number(mat.quantity_per_pack) : null,
+      packCapacityUnit: mat.pack_capacity_unit || null
     };
 
     if (req.io) {

@@ -1,12 +1,13 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ToastContext } from '../App';
-import { Mail, Lock, User, Phone, Coffee } from 'lucide-react';
+import { Mail, Lock, User, Phone, Coffee, Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = ({ setAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('cashier'); // default role
@@ -236,13 +237,33 @@ const AuthPage = ({ setAuth }) => {
             <div style={{ position: 'relative' }}>
               <Lock size={16} color="var(--text-subtle)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
               <input 
-                type="password" 
+                type={showPassword ? "text" : "password"} 
                 placeholder="Password" 
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={{ width: '100%', paddingLeft: '2.5rem', height: '2.6rem', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}
+                style={{ width: '100%', paddingLeft: '2.5rem', paddingRight: '2.5rem', height: '2.6rem', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-muted)'
+                }}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
 
             {/* Role dropdown (Sign Up only) */}

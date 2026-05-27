@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import bcrypt from 'bcryptjs';
 
 // Get all users (both approved staff and pending requests)
 export const getAllUsers = async (req, res) => {
@@ -128,3 +129,54 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Admin directly creates approved user
+export const adminCreateUser = async (req, res) => {
+  const { email, password, full_name, role, phone } = req.body;
+
+  if (!email || !password || !full_name || !role) {
+    return res.status(400).json({ message: 'All fields (Name, Email, Password, Role) are required' });
+  }
+
+  try {
+    const { data: userExists } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert({
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        full_name: full_name,
+        role: role.toLowerCase(),
+        phone: phone || '',
+        status: 'approved',
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      _id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      role: user.role,
+      status: user.status
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

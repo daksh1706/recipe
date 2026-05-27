@@ -82,12 +82,17 @@ const InventoryDashboard = ({ userRole }) => {
   const [minimumStockLevel, setMinimumStockLevel] = useState('');
   const [reorderQuantity, setReorderQuantity] = useState('');
   const [costPerUnit, setCostPerUnit] = useState('');
+  const [totalPurchaseCost, setTotalPurchaseCost] = useState('');
+  const [quantityPerPack, setQuantityPerPack] = useState('');
+  const [packCapacityUnit, setPackCapacityUnit] = useState('ml');
   const [supplierId, setSupplierId] = useState('');
   const [storageLocation, setStorageLocation] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
 
   // Restock Field
   const [restockQty, setRestockQty] = useState('');
+  const [restockTotalCost, setRestockTotalCost] = useState('');
+  const [restockReorderQty, setRestockReorderQty] = useState('');
   const [restockNotes, setRestockNotes] = useState('');
 
   const categories = [
@@ -101,7 +106,7 @@ const InventoryDashboard = ({ userRole }) => {
     { value: 'other', label: 'Other Items' }
   ];
 
-  const units = ['ml', 'l', 'g', 'kg', 'pinch', 'piece', 'tsp', 'tbsp', 'cup'];
+  const units = ['ml', 'l', 'g', 'kg', 'pinch', 'piece', 'tsp', 'tbsp', 'cup', 'bottle', 'pouch', 'pack'];
 
   const fetchData = async () => {
     try {
@@ -174,8 +179,11 @@ const InventoryDashboard = ({ userRole }) => {
       setUnit(m.unit);
       setCurrentStock(m.currentStock);
       setMinimumStockLevel(m.minimumStockLevel);
-      setReorderQuantity(m.reorderQuantity);
-      setCostPerUnit(m.costPerUnit);
+      setReorderQuantity(m.reorderQuantity || '');
+      setCostPerUnit(m.costPerUnit || '');
+      setTotalPurchaseCost((Number(m.costPerUnit || 0) * Number(m.currentStock || 0)).toFixed(2));
+      setQuantityPerPack(m.quantityPerPack || '');
+      setPackCapacityUnit(m.packCapacityUnit || 'ml');
       setSupplierId(m.supplierId || '');
       setStorageLocation(m.storageLocation || '');
       setExpiryDate(m.expiryDate ? m.expiryDate.split('T')[0] : '');
@@ -190,6 +198,9 @@ const InventoryDashboard = ({ userRole }) => {
       setMinimumStockLevel('');
       setReorderQuantity('');
       setCostPerUnit('');
+      setTotalPurchaseCost('');
+      setQuantityPerPack('');
+      setPackCapacityUnit('ml');
       setSupplierId('');
       setStorageLocation('');
       setExpiryDate('');
@@ -200,6 +211,12 @@ const InventoryDashboard = ({ userRole }) => {
   const handleSaveMaterial = async (e) => {
     e.preventDefault();
 
+    let calculatedCostPerUnit = Number(costPerUnit || 0);
+    if (totalPurchaseCost !== '') {
+      const stockVal = Number(currentStock || 0);
+      calculatedCostPerUnit = stockVal > 0 ? Number(totalPurchaseCost) / stockVal : 0;
+    }
+
     const payload = {
       itemCode,
       name,
@@ -207,11 +224,12 @@ const InventoryDashboard = ({ userRole }) => {
       unit,
       currentStock: Number(currentStock),
       minimumStockLevel: Number(minimumStockLevel),
-      reorderQuantity: Number(reorderQuantity),
-      costPerUnit: Number(costPerUnit),
+      costPerUnit: calculatedCostPerUnit,
       supplierId: supplierId || null,
       storageLocation,
-      expiryDate: expiryDate || null
+      expiryDate: expiryDate || null,
+      quantityPerPack: ['bottle', 'pouch', 'pack'].includes(unit) ? Number(quantityPerPack) : null,
+      packCapacityUnit: ['bottle', 'pouch', 'pack'].includes(unit) ? packCapacityUnit : null
     };
 
     const url = editId ? `/api/inventory/${editId}` : '/api/inventory';
@@ -265,6 +283,8 @@ const InventoryDashboard = ({ userRole }) => {
     setRestockItemName(m.name);
     setRestockQty(m.reorderQuantity || 50);
     setRestockNotes('Standard manual stock replenishment');
+    setRestockTotalCost('');
+    setRestockReorderQty(m.reorderQuantity || 50);
     setShowRestockModal(true);
   };
 
@@ -283,7 +303,12 @@ const InventoryDashboard = ({ userRole }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${auth.token}`
         },
-        body: JSON.stringify({ quantity: Number(restockQty), notes: restockNotes })
+        body: JSON.stringify({ 
+          quantity: Number(restockQty), 
+          totalCost: restockTotalCost ? Number(restockTotalCost) : null,
+          reorderQuantity: restockReorderQty ? Number(restockReorderQty) : null,
+          notes: restockNotes 
+        })
       });
       if (res.ok) {
         showToast(`Stock replenished for ${restockItemName}!`, 'success');
@@ -663,28 +688,39 @@ const InventoryDashboard = ({ userRole }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Current Stock Level</label>
-                  <input type="number" required placeholder="12500" value={currentStock} onChange={(e) => setCurrentStock(e.target.value)} />
+              {['bottle', 'pouch', 'pack'].includes(unit) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--primary)', backgroundColor: 'rgba(var(--primary-rgb), 0.05)' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '0.25rem' }}>Capacity per {unit}</label>
+                    <input type="number" required placeholder="e.g. 750" value={quantityPerPack} onChange={(e) => setQuantityPerPack(e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '0.25rem' }}>Capacity Base Unit</label>
+                    <select value={packCapacityUnit} onChange={(e) => setPackCapacityUnit(e.target.value)}>
+                      <option value="ml">ml (milliliters)</option>
+                      <option value="l">L (liters)</option>
+                      <option value="g">g (grams)</option>
+                      <option value="kg">kg (kilograms)</option>
+                    </select>
+                  </div>
                 </div>
-                
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Unit Cost (₹)</label>
-                  <input type="number" step="any" required placeholder="0.95" value={costPerUnit} onChange={(e) => setCostPerUnit(e.target.value)} />
-                </div>
-              </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Minimum Safety Level</label>
-                  <input type="number" required placeholder="1000" value={minimumStockLevel} onChange={(e) => setMinimumStockLevel(e.target.value)} />
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Current Stock Level</label>
+                  <input type="number" required placeholder="e.g. 10" value={currentStock} onChange={(e) => setCurrentStock(e.target.value)} />
                 </div>
                 
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Reorder Batch Quantity</label>
-                  <input type="number" required placeholder="5000" value={reorderQuantity} onChange={(e) => setReorderQuantity(e.target.value)} />
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Total Purchase Cost (₹)</label>
+                  <input type="number" step="any" required placeholder="e.g. 500" value={totalPurchaseCost} onChange={(e) => setTotalPurchaseCost(e.target.value)} />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Minimum Safety Level</label>
+                <input type="number" required placeholder="e.g. 2" value={minimumStockLevel} onChange={(e) => setMinimumStockLevel(e.target.value)} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
@@ -745,9 +781,21 @@ const InventoryDashboard = ({ userRole }) => {
 
             <form onSubmit={handleSaveRestock} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
               
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Replenishment Qty</label>
+                  <input type="number" required min="1" placeholder="e.g. 5" value={restockQty} onChange={(e) => setRestockQty(e.target.value)} />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Next Reorder Alert Qty</label>
+                  <input type="number" required placeholder="e.g. 5" value={restockReorderQty} onChange={(e) => setRestockReorderQty(e.target.value)} />
+                </div>
+              </div>
+
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Replenishment Quantity</label>
-                <input type="number" required min="1" placeholder="Quantity value" value={restockQty} onChange={(e) => setRestockQty(e.target.value)} />
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Total Cost of Batch (₹) [Optional]</label>
+                <input type="number" step="any" placeholder="e.g. 250" value={restockTotalCost} onChange={(e) => setRestockTotalCost(e.target.value)} />
               </div>
 
               <div>
