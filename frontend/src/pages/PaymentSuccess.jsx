@@ -55,9 +55,10 @@ const PaymentSuccess = () => {
     const doubleLine = "==========================================";
     const singleLine = "------------------------------------------";
 
+    const tokenNo = order.orderNumber ? order.orderNumber.replace('ORD-', '') : '0000';
     doc.setFontSize(12);
     doc.setFont('courier', 'bold');
-    doc.text("          KITCHEN TOKEN", marginLeft, y);
+    doc.text(`      KITCHEN TOKEN: ${tokenNo}`, marginLeft, y);
     y += 4;
     doc.setFontSize(8);
     doc.setFont('courier', 'normal');

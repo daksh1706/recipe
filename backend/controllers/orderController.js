@@ -448,3 +448,52 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const confirmPayment = async (req, res) => {
+  const { order_id } = req.body;
+  if (!order_id) {
+    return res.status(400).json({ message: 'Order ID is required' });
+  }
+
+  try {
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*, customer:customers(*), order_items(*, menu_items(*))')
+      .eq('id', order_id)
+      .single();
+
+    if (error || !order) {
+      console.error("Confirm Payment error or order not found:", error);
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Map order fields to what PaymentSuccess.jsx expects
+    const formattedOrder = {
+      id: order.id,
+      orderNumber: order.order_code,
+      invoiceNumber: `BILL-${order.order_code.replace('ORD-', '')}`,
+      createdAt: order.created_at,
+      subtotal: Number(order.subtotal || 0),
+      discountAmount: Number(order.discount_amount || 0),
+      taxAmount: Number(order.gst_amount || 0),
+      totalAmount: Number(order.grand_total || 0),
+      paymentMethod: (order.payment_method || 'CASH').toUpperCase(),
+      customerDetails: order.customer ? {
+        phone: order.customer.phone,
+        name: order.customer.name
+      } : null,
+      items: (order.order_items || []).map(item => ({
+        menuItem: item.menu_items ? { name: item.menu_items.name } : { name: 'Item' },
+        quantity: item.quantity,
+        subtotal: Number(item.subtotal || 0),
+        customizations: []
+      }))
+    };
+
+    res.json(formattedOrder);
+  } catch (err) {
+    console.error("Error in confirmPayment controller:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+

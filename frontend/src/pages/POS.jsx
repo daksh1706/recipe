@@ -461,31 +461,44 @@ const POS = ({ auth }) => {
     doc.setFontSize(8);
     doc.setFont('Helvetica', 'bold');
     const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
-    doc.text(`Order: ${r.orderCode}`, 5, 27);
-    doc.text(`Token: ${tokenNumber}`, 50, 27);
+    const billNo = r.orderCode ? `BILL-${r.orderCode.replace('ORD-', '')}` : 'N/A';
+    
+    doc.text(`Bill No: ${billNo}`, 5, 27);
+    doc.text(`Order: ${r.orderCode}`, 5, 31);
+    doc.text(`Token: ${tokenNumber}`, 50, 31);
+    
     doc.setFont('Helvetica', 'normal');
-    doc.text(`Date: ${new Date(r.createdAt).toLocaleString()}`, 5, 31);
-    doc.text(`Type: ${r.orderType?.toUpperCase()}`, 5, 35);
-    if (r.tableNumber) doc.text(`Table: #${r.tableNumber}`, 50, 35);
+    doc.text(`Date: ${new Date(r.createdAt).toLocaleString()}`, 5, 35);
+    
+    let currentY = 39;
+    doc.text(`Type: ${r.orderType?.toUpperCase()}`, 5, currentY);
+    if (r.tableNumber) {
+      doc.text(`Table: #${r.tableNumber}`, 50, currentY);
+    }
+    currentY += 4;
     
     if (r.customer) {
-      doc.text(`Guest: ${r.customer.name} (${r.customer.phone})`, 5, 39);
+      doc.text(`Guest: ${r.customer.name} (${r.customer.phone})`, 5, currentY);
+      currentY += 4;
     }
 
-    doc.line(5, 42, 75, 42); // divider
+    doc.line(5, currentY, 75, currentY); // divider
+    currentY += 4;
 
     // Itemized table header columns
     doc.setFont('Helvetica', 'bold');
-    doc.text('Item Description', 5, 46);
-    doc.text('Qty', 45, 46);
-    doc.text('Price', 53, 46);
-    doc.text('Total', 67, 46);
+    doc.text('Item Description', 5, currentY);
+    doc.text('Qty', 45, currentY);
+    doc.text('Price', 53, currentY);
+    doc.text('Total', 67, currentY);
     
-    doc.line(5, 48, 75, 48); // divider
+    currentY += 2;
+    doc.line(5, currentY, 75, currentY); // divider
+    currentY += 4;
     
     // Render product items
     doc.setFont('Helvetica', 'normal');
-    let y = 52;
+    let y = currentY;
     r.items.forEach(item => {
       const name = item.menuItem ? item.menuItem.name : 'Coffee Item';
       // Truncate name if too long
