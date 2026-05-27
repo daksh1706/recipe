@@ -15,7 +15,10 @@ const ActiveOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch('/api/orders');
+      const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
+      const res = await fetch('/api/orders', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         // Show only active pipeline orders: pending, preparing, and ready
@@ -29,9 +32,13 @@ const ActiveOrders = () => {
 
   const updateStatus = async (id, newStatus, orderCode) => {
     try {
+      const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
       const res = await fetch(`/api/orders/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
         body: JSON.stringify({ status: newStatus })
       });
       

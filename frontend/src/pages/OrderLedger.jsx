@@ -54,7 +54,10 @@ const OrderLedger = () => {
       if (selectedStaffId) params.append('staff', selectedStaffId);
       if (searchTerm) params.append('search', searchTerm);
 
-      const res = await fetch(`/api/orders?${params.toString()}`);
+      const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
+      const res = await fetch(`/api/orders?${params.toString()}`, {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
       if (res.ok) {
         const data = await res.json();
         setOrders(data);
@@ -71,9 +74,13 @@ const OrderLedger = () => {
 
   const updateOrderStatusInLedger = async (id, newStatus, orderCode) => {
     try {
+      const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
       const res = await fetch(`/api/orders/${id}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
