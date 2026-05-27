@@ -83,8 +83,9 @@ const POS = ({ auth }) => {
     { value: 'savoury_bites', label: 'Savoury Bites' }
   ];
 
-  // 1. Fetch Menu Items
-  const fetchMenu = async () => {
+  // 1. Fetch Menu Items — with auto-retry for Render cold starts
+  const fetchMenu = async (attempt = 1) => {
+    setLoadingMenu(true);
     try {
       const res = await fetch('/api/menu', {
         headers: { 'Authorization': `Bearer ${auth.token}` }
@@ -92,13 +93,24 @@ const POS = ({ auth }) => {
       const data = await res.json();
       if (res.ok) {
         setMenuItems(data);
+        setLoadingMenu(false);
+      } else if (res.status === 401) {
+        showToast('Session expired — please log in again', 'error');
+        setLoadingMenu(false);
+      } else if (attempt < 3) {
+        // Auto-retry (handles Render cold start)
+        setTimeout(() => fetchMenu(attempt + 1), 2500);
       } else {
-        showToast(data.message || 'Failed to fetch menu', 'error');
+        showToast(data.message || 'Failed to load menu. Tap Retry.', 'error');
+        setLoadingMenu(false);
       }
     } catch (err) {
-      showToast(err.message, 'error');
-    } finally {
-      setLoadingMenu(false);
+      if (attempt < 3) {
+        setTimeout(() => fetchMenu(attempt + 1), 2500);
+      } else {
+        showToast('Cannot reach server. Check your connection.', 'error');
+        setLoadingMenu(false);
+      }
     }
   };
 
@@ -155,25 +167,54 @@ const POS = ({ auth }) => {
     return () => clearTimeout(timer); // cleanup debounce on each keystroke
   }, [customerPhone]);
 
-  // 3. Cart Functions — opens customization wizard before adding
+  // 3. Cart Functions — clicking a card adds directly; Customize button opens wizard
   const addToCart = (item) => {
     if (!item.isAvailable) {
       showToast(`${item.name} is currently out of stock!`, 'warning');
       return;
     }
-    // Open the Build Your Own modal
+    // Direct add with no customizations
+    addItemToCartWithCustomizations(item, []);
+  };
+
+  const openCustomize = (e, item) => {
+    e.stopPropagation(); // prevent card click from also adding to cart
+    if (!item.isAvailable) {
+      showToast(`${item.name} is currently out of stock!`, 'warning');
+      return;
+    }
     const initialSelections = {};
     CUST_CATEGORIES.forEach(c => { initialSelections[c.key] = c.multi ? [] : null; });
     setCustModal({ item, step: 0, selections: initialSelections });
   };
 
-  // Confirm customizations and add item to cart
-  const confirmAddToCart = (item, selections) => {
+  // Shared: add item to cart with given customizations array
+  const addItemToCartWithCustomizations = (item, customizations) => {
     const savedGst = localStorage.getItem('gstConfig');
     const gstConfig = savedGst ? JSON.parse(savedGst) : {};
     const finalGstPercent = gstConfig[item.category] !== undefined ? Number(gstConfig[item.category]) : (item.gstPercent || 5.0);
+    const custKey = JSON.stringify(customizations);
 
-    // Build flat customizations array from selections
+    setCart(prev => {
+      const idx = prev.findIndex(ci => ci._id === item._id && JSON.stringify(ci.customizations || []) === custKey);
+      if (idx > -1) {
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 };
+        return updated;
+      }
+      return [...prev, {
+        _id: item._id,
+        name: item.name,
+        price: item.price,
+        gstPercent: finalGstPercent,
+        quantity: 1,
+        customizations
+      }];
+    });
+  };
+
+  // Confirm customizations from wizard and add item to cart
+  const confirmAddToCart = (item, selections) => {
     const customizations = [];
     CUST_CATEGORIES.forEach(cat => {
       const val = selections[cat.key];
@@ -183,30 +224,12 @@ const POS = ({ auth }) => {
         customizations.push({ category: cat.label, name: val });
       }
     });
-
-    const custKey = JSON.stringify(customizations); // distinguish same item with different customizations
-
-    setCart(prev => {
-      const idx = prev.findIndex(cartItem => cartItem._id === item._id && JSON.stringify(cartItem.customizations) === custKey);
-      if (idx > -1) {
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 };
-        return updated;
-      } else {
-        return [...prev, {
-          _id: item._id,
-          name: item.name,
-          price: item.price,
-          gstPercent: finalGstPercent,
-          quantity: 1,
-          customizations
-        }];
-      }
-    });
+    addItemToCartWithCustomizations(item, customizations);
     setCustModal(null);
   };
 
   const updateQuantity = (id, delta, customizations) => {
+
     const custKey = JSON.stringify(customizations || []);
     setCart(prev => {
       return prev.map(item => {
@@ -218,6 +241,7 @@ const POS = ({ auth }) => {
       }).filter(Boolean);
     });
   };
+
 
   const removeFromCart = (id, customizations) => {
     const custKey = JSON.stringify(customizations || []);
@@ -731,15 +755,31 @@ const POS = ({ auth }) => {
         {/* Menu Grid scroll frame */}
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="custom-scroll">
           {loadingMenu ? (
-            <div className="pos-grid">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="glass skeleton" style={{ height: '200px', borderRadius: 'var(--radius-lg)' }} />
-              ))}
+            <div>
+              <div className="pos-grid">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} className="glass skeleton" style={{ height: '200px', borderRadius: 'var(--radius-lg)' }} />
+                ))}
+              </div>
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '1rem' }}>
+                ⏳ Loading menu… (waking up server, may take a moment)
+              </p>
+            </div>
+          ) : menuItems.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', color: 'var(--text-muted)', gap: '1rem' }}>
+              <Coffee size={48} style={{ opacity: 0.5 }} />
+              <p>Could not load menu items.</p>
+              <button
+                onClick={() => fetchMenu()}
+                style={{ padding: '0.6rem 1.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem' }}
+              >
+                ↺ Retry
+              </button>
             </div>
           ) : filteredMenu.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', color: 'var(--text-muted)' }}>
               <Coffee size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-              <p>No coffee or bites found in this category.</p>
+              <p>No items found in this category.</p>
             </div>
           ) : (
             <div className="pos-grid">
@@ -797,7 +837,26 @@ const POS = ({ auth }) => {
 
                   <span className="pos-item-name">{item.name}</span>
                   <span className="pos-item-category">{item.category.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
-                  <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                    <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
+                    {item.isAvailable && (
+                      <button
+                        onClick={(e) => openCustomize(e, item)}
+                        style={{
+                          fontSize: '0.65rem', fontWeight: '800',
+                          padding: '0.2rem 0.5rem',
+                          background: 'rgba(140,98,57,0.12)',
+                          color: 'var(--primary)',
+                          border: '1px solid rgba(140,98,57,0.3)',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        ✨ Customize
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1262,34 +1321,54 @@ const POS = ({ auth }) => {
               })()}
             </div>
 
-            {/* Navigation Buttons */}
-            <div style={{ padding: '1rem 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--border)' }}>
+            {/* Navigation Buttons: Back | Skip | Next/Add to Cart */}
+            <div style={{ padding: '1rem 1.5rem 1.25rem', display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--border)' }}>
+              {/* Back / Cancel */}
               <button
                 onClick={() => {
                   if (custModal.step === 0) setCustModal(null);
                   else setCustModal(prev => ({ ...prev, step: prev.step - 1 }));
                 }}
-                style={{ flex: 1, height: '2.5rem', background: 'var(--border)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                style={{ flex: 1, height: '2.5rem', background: 'var(--border)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.85rem' }}
               >
-                <ChevronLeft size={16} /> {custModal.step === 0 ? 'Cancel' : 'Back'}
+                <ChevronLeft size={14} /> {custModal.step === 0 ? 'Cancel' : 'Back'}
               </button>
 
+              {/* Skip */}
+              <button
+                onClick={() => {
+                  // Clear selection for current step and advance (or confirm)
+                  const cat = CUST_CATEGORIES[custModal.step];
+                  const clearedSelections = { ...custModal.selections, [cat.key]: cat.multi ? [] : null };
+                  if (custModal.step < CUST_CATEGORIES.length - 1) {
+                    setCustModal(prev => ({ ...prev, step: prev.step + 1, selections: clearedSelections }));
+                  } else {
+                    confirmAddToCart(custModal.item, clearedSelections);
+                  }
+                }}
+                style={{ flex: 1, height: '2.5rem', background: 'transparent', border: '1.5px dashed var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', color: 'var(--text-muted)', fontSize: '0.85rem' }}
+              >
+                Skip
+              </button>
+
+              {/* Next / Add to Cart */}
               {custModal.step < CUST_CATEGORIES.length - 1 ? (
                 <button
                   onClick={() => setCustModal(prev => ({ ...prev, step: prev.step + 1 }))}
-                  style={{ flex: 2, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  style={{ flex: 1.5, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.85rem' }}
                 >
-                  Next <ChevronRight size={16} />
+                  Next <ChevronRight size={14} />
                 </button>
               ) : (
                 <button
                   onClick={() => confirmAddToCart(custModal.item, custModal.selections)}
-                  style={{ flex: 2, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  style={{ flex: 1.5, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.85rem' }}
                 >
-                  <CheckCircle size={16} /> Add to Cart
+                  <CheckCircle size={14} /> Add to Cart
                 </button>
               )}
             </div>
+
           </div>
         </div>
       )}
