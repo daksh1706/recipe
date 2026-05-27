@@ -351,7 +351,7 @@ const Customers = () => {
 
             {/* Customer reviews feedback history */}
             <div>
-              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-subtle)', display: 'block', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-subtle)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <MessageSquare size={12} /> GUEST REVIEWS SUBMITTED ({activeProfile.feedback?.length || 0})
               </span>
 
