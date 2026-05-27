@@ -4,14 +4,24 @@ export const getMenuItems = async (req, res) => {
   try {
     const { data: items, error } = await supabase
       .from('menu_items')
-      .select('*, recipes:recipes(*, recipe_ingredients:recipe_ingredients(*, raw_material:raw_materials(*)))')
+      .select(`
+        *,
+        recipes (
+          id, serving_size, prep_time_minutes, instructions,
+          recipe_ingredients (
+            id, quantity, unit,
+            raw_materials ( id, item_code, name, unit, current_stock, cost_per_unit )
+          )
+        )
+      `)
       .order('name');
 
     if (error) throw error;
 
     // Map output to match frontend camelCase compatibility
-    const formattedItems = items.map(item => {
-      const recipeObj = item.recipes && item.recipes.length > 0 ? item.recipes[0] : null;
+    const formattedItems = (items || []).map(item => {
+      const recipeArr = item.recipes || [];
+      const recipeObj = recipeArr.length > 0 ? recipeArr[0] : null;
       return {
         _id: item.id,
         id: item.id,
@@ -30,20 +40,20 @@ export const getMenuItems = async (req, res) => {
           servingSize: recipeObj.serving_size,
           prepTimeMinutes: recipeObj.prep_time_minutes,
           instructions: recipeObj.instructions,
-          ingredients: recipeObj.recipe_ingredients ? recipeObj.recipe_ingredients.map(ri => ({
+          ingredients: (recipeObj.recipe_ingredients || []).map(ri => ({
             id: ri.id,
             quantity: Number(ri.quantity),
             unit: ri.unit,
-            rawMaterial: ri.raw_material ? {
-              id: ri.raw_material.id,
-              _id: ri.raw_material.id,
-              itemCode: ri.raw_material.item_code,
-              name: ri.raw_material.name,
-              unit: ri.raw_material.unit,
-              currentStock: Number(ri.raw_material.current_stock),
-              costPerUnit: Number(ri.raw_material.cost_per_unit)
+            rawMaterial: ri.raw_materials ? {
+              id: ri.raw_materials.id,
+              _id: ri.raw_materials.id,
+              itemCode: ri.raw_materials.item_code,
+              name: ri.raw_materials.name,
+              unit: ri.raw_materials.unit,
+              currentStock: Number(ri.raw_materials.current_stock),
+              costPerUnit: Number(ri.raw_materials.cost_per_unit)
             } : null
-          })) : []
+          }))
         } : null
       };
     });
@@ -53,6 +63,7 @@ export const getMenuItems = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 export const addMenuItem = async (req, res) => {
   const { itemCode, item_code, name, description, category, price, gstPercent, gst_percent, isAvailable, is_available, imageUrl, image_url, recipe } = req.body;

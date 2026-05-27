@@ -19,7 +19,11 @@ import {
   CheckCircle,
   HelpCircle,
   FileText,
-  ShoppingCart
+  ShoppingCart,
+  ChevronRight,
+  ChevronLeft,
+  Settings2,
+  X
 } from 'lucide-react';
 
 const POS = ({ auth }) => {
@@ -28,6 +32,18 @@ const POS = ({ auth }) => {
   // Data State
   const [menuItems, setMenuItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
+  const [rawMaterials, setRawMaterials] = useState([]);
+  
+  // Build Your Own Customization Modal
+  const [custModal, setCustModal] = useState(null); // { item, step, selections }
+  
+  // Customization categories in order
+  const CUST_CATEGORIES = [
+    { key: 'milk_dairy',    label: 'Milk Type',    emoji: '🥛', multi: false },
+    { key: 'syrups_sauces',label: 'Syrups',       emoji: '🍯', multi: true  },
+    { key: 'coffee_beans', label: 'Coffee Shot',  emoji: '☕', multi: false },
+    { key: 'other',        label: 'Extras',       emoji: '✨', multi: true  },
+  ];
   
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,7 +104,23 @@ const POS = ({ auth }) => {
 
   useEffect(() => {
     fetchMenu();
+    fetchRawMaterials();
   }, []);
+
+  // Fetch raw materials for customization options
+  const fetchRawMaterials = async () => {
+    try {
+      const res = await fetch('/api/inventory', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRawMaterials(data.filter(m => m.currentStock > 0)); // only in-stock items
+      }
+    } catch (err) {
+      // silent — customizations degrade gracefully
+    }
+  };
 
   // 2. Real-time Customer Phone Lookup — debounced 600ms so it only fires after user stops typing
   useEffect(() => {
@@ -123,22 +155,42 @@ const POS = ({ auth }) => {
     return () => clearTimeout(timer); // cleanup debounce on each keystroke
   }, [customerPhone]);
 
-  // 3. Cart Functions
+  // 3. Cart Functions — opens customization wizard before adding
   const addToCart = (item) => {
     if (!item.isAvailable) {
       showToast(`${item.name} is currently out of stock!`, 'warning');
       return;
     }
+    // Open the Build Your Own modal
+    const initialSelections = {};
+    CUST_CATEGORIES.forEach(c => { initialSelections[c.key] = c.multi ? [] : null; });
+    setCustModal({ item, step: 0, selections: initialSelections });
+  };
 
+  // Confirm customizations and add item to cart
+  const confirmAddToCart = (item, selections) => {
     const savedGst = localStorage.getItem('gstConfig');
     const gstConfig = savedGst ? JSON.parse(savedGst) : {};
     const finalGstPercent = gstConfig[item.category] !== undefined ? Number(gstConfig[item.category]) : (item.gstPercent || 5.0);
 
+    // Build flat customizations array from selections
+    const customizations = [];
+    CUST_CATEGORIES.forEach(cat => {
+      const val = selections[cat.key];
+      if (Array.isArray(val)) {
+        val.forEach(name => customizations.push({ category: cat.label, name }));
+      } else if (val && val !== 'none') {
+        customizations.push({ category: cat.label, name: val });
+      }
+    });
+
+    const custKey = JSON.stringify(customizations); // distinguish same item with different customizations
+
     setCart(prev => {
-      const idx = prev.findIndex(cartItem => cartItem._id === item._id);
+      const idx = prev.findIndex(cartItem => cartItem._id === item._id && JSON.stringify(cartItem.customizations) === custKey);
       if (idx > -1) {
         const updated = [...prev];
-        updated[idx].quantity += 1;
+        updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 };
         return updated;
       } else {
         return [...prev, {
@@ -146,16 +198,19 @@ const POS = ({ auth }) => {
           name: item.name,
           price: item.price,
           gstPercent: finalGstPercent,
-          quantity: 1
+          quantity: 1,
+          customizations
         }];
       }
     });
+    setCustModal(null);
   };
 
-  const updateQuantity = (id, delta) => {
+  const updateQuantity = (id, delta, customizations) => {
+    const custKey = JSON.stringify(customizations || []);
     setCart(prev => {
       return prev.map(item => {
-        if (item._id === id) {
+        if (item._id === id && JSON.stringify(item.customizations || []) === custKey) {
           const newQty = item.quantity + delta;
           return newQty > 0 ? { ...item, quantity: newQty } : null;
         }
@@ -164,8 +219,11 @@ const POS = ({ auth }) => {
     });
   };
 
-  const removeFromCart = (id) => {
-    setCart(prev => prev.filter(item => item._id !== id));
+  const removeFromCart = (id, customizations) => {
+    const custKey = JSON.stringify(customizations || []);
+    setCart(prev => prev.filter(item => 
+      !(item._id === id && JSON.stringify(item.customizations || []) === custKey)
+    ));
   };
 
   // 4. POS Pricing Math Calculations
@@ -218,7 +276,7 @@ const POS = ({ auth }) => {
     setCheckoutLoading(true);
 
     const payload = {
-      items: cart.map(i => ({ menuItemId: i._id, quantity: i.quantity })),
+      items: cart.map(i => ({ menuItemId: i._id, quantity: i.quantity, customizations: i.customizations || [] })),
       orderType,
       tableNumber: orderType === 'dine_in' ? Number(tableNumber) : null,
       discountPercent: Number(discountPercent),
@@ -291,12 +349,19 @@ const POS = ({ auth }) => {
       const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
       const price = Number(item.unitPrice || item.price || 0).toFixed(2);
       const total = Number(item.subtotal || (item.quantity * (item.unitPrice || item.price || 0))).toFixed(2);
+      const customizationsArr = item.customizations || [];
+      const customNote = customizationsArr.length > 0
+        ? `<div style="font-size:9px;color:#555;padding-left:4px;margin-top:1px;">↳ ${customizationsArr.map(c => c.name).join(', ')}</div>`
+        : '';
       return `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-          <div style="width: 50%;">${displayName}</div>
-          <div style="width: 10%; text-align: center;">${item.quantity}</div>
-          <div style="width: 20%; text-align: right;">${price}</div>
-          <div style="width: 20%; text-align: right;">${total}</div>
+        <div style="margin-bottom: 4px;">
+          <div style="display: flex; justify-content: space-between;">
+            <div style="width: 50%;">${displayName}</div>
+            <div style="width: 10%; text-align: center;">${item.quantity}</div>
+            <div style="width: 20%; text-align: right;">${price}</div>
+            <div style="width: 20%; text-align: right;">${total}</div>
+          </div>
+          ${customNote}
         </div>
       `;
     }).join('');
@@ -761,37 +826,52 @@ const POS = ({ auth }) => {
               <p style={{ fontSize: '0.9rem' }}>Cart is empty.<br />Click coffee cards to add.</p>
             </div>
           ) : (
-            cart.map(item => (
-              <div key={item._id} className="cart-item">
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>{item.name}</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>₹{Number(item.price).toFixed(2)}</span>
-                </div>
-                
-                {/* Quantity adjustments +/- */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0 1rem' }}>
-                  <button 
-                    onClick={() => updateQuantity(item._id, -1)}
-                    style={{ width: '22px', height: '22px', borderRadius: '4px', border: 'none', background: 'var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Minus size={12} />
-                  </button>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800' }}>{item.quantity}</span>
-                  <button 
-                    onClick={() => updateQuantity(item._id, 1)}
-                    style={{ width: '22px', height: '22px', borderRadius: '4px', border: 'none', background: 'var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Plus size={12} />
-                  </button>
-                </div>
+            cart.map((item, idx) => (
+              <div key={`${item._id}-${idx}`} className="cart-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>{item.name}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>₹{Number(item.price).toFixed(2)}</span>
+                  </div>
+                  
+                  {/* Quantity adjustments +/- */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0 0.75rem' }}>
+                    <button 
+                      onClick={() => updateQuantity(item._id, -1, item.customizations)}
+                      style={{ width: '22px', height: '22px', borderRadius: '4px', border: 'none', background: 'var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <span style={{ fontSize: '0.9rem', fontWeight: '800' }}>{item.quantity}</span>
+                    <button 
+                      onClick={() => updateQuantity(item._id, 1, item.customizations)}
+                      style={{ width: '22px', height: '22px', borderRadius: '4px', border: 'none', background: 'var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
 
-                {/* Remove Trash icon */}
-                <button 
-                  onClick={() => removeFromCart(item._id)}
-                  style={{ background: 'transparent', border: 'none', color: '#d9534f', cursor: 'pointer' }}
-                >
-                  <Trash2 size={16} />
-                </button>
+                  {/* Remove Trash icon */}
+                  <button 
+                    onClick={() => removeFromCart(item._id, item.customizations)}
+                    style={{ background: 'transparent', border: 'none', color: '#d9534f', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                {/* Customization tags */}
+                {item.customizations && item.customizations.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', paddingLeft: '0.1rem' }}>
+                    {item.customizations.map((c, ci) => (
+                      <span key={ci} style={{
+                        fontSize: '0.68rem', fontWeight: '700',
+                        background: 'rgba(140,98,57,0.1)', color: 'var(--primary)',
+                        padding: '0.1rem 0.4rem', borderRadius: '10px',
+                        border: '1px solid rgba(140,98,57,0.2)'
+                      }}>{c.name}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -1063,6 +1143,152 @@ const POS = ({ auth }) => {
               >
                 Close Ticket
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* BUILD YOUR OWN CUSTOMIZATION WIZARD MODAL */}
+      {custModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            width: '480px', maxWidth: '95vw',
+            background: 'var(--bg-panel)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-lg)',
+            overflow: 'hidden'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+              padding: '1.25rem 1.5rem',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.75)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Build Your Own</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'white' }}>{custModal.item.name}</div>
+              </div>
+              <button onClick={() => setCustModal(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Step Progress Bar */}
+            <div style={{ display: 'flex', padding: '0.75rem 1.5rem 0', gap: '0.4rem' }}>
+              {CUST_CATEGORIES.map((cat, i) => (
+                <div key={i} style={{ flex: 1, height: '4px', borderRadius: '2px', background: i <= custModal.step ? 'var(--primary)' : 'var(--border)', transition: 'background 0.3s' }} />
+              ))}
+            </div>
+
+            {/* Step Label */}
+            <div style={{ padding: '0.75rem 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '1.4rem' }}>{CUST_CATEGORIES[custModal.step]?.emoji}</span>
+              <div>
+                <div style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)' }}>{CUST_CATEGORIES[custModal.step]?.label}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Step {custModal.step + 1} of {CUST_CATEGORIES.length} — {CUST_CATEGORIES[custModal.step]?.multi ? 'Select all that apply' : 'Select one'}
+                </div>
+              </div>
+            </div>
+
+            {/* Options List */}
+            <div style={{ padding: '0.75rem 1.5rem', maxHeight: '240px', overflowY: 'auto' }} className="custom-scroll">
+              {(() => {
+                const cat = CUST_CATEGORIES[custModal.step];
+                const options = rawMaterials.filter(m => m.category === cat.key);
+                const currentVal = custModal.selections[cat.key];
+
+                if (options.length === 0) {
+                  return <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1rem 0', textAlign: 'center' }}>No options available — will skip this step.</div>;
+                }
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {/* None option */}
+                    {!cat.multi && (
+                      <label style={{
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-sm)',
+                        border: `1.5px solid ${currentVal === null || currentVal === 'none' ? 'var(--primary)' : 'var(--border)'}`,
+                        background: currentVal === null || currentVal === 'none' ? 'rgba(140,98,57,0.07)' : 'transparent',
+                        cursor: 'pointer', transition: 'all 0.15s'
+                      }}>
+                        <input type="radio" name={`cust-${cat.key}`} checked={currentVal === null || currentVal === 'none'}
+                          onChange={() => setCustModal(prev => ({ ...prev, selections: { ...prev.selections, [cat.key]: 'none' } }))}
+                          style={{ accentColor: 'var(--primary)' }} />
+                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>None / Standard</span>
+                      </label>
+                    )}
+                    {options.map(opt => {
+                      const isSelected = cat.multi
+                        ? (Array.isArray(currentVal) && currentVal.includes(opt.name))
+                        : currentVal === opt.name;
+                      return (
+                        <label key={opt.id} style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem',
+                          padding: '0.6rem 0.85rem', borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                          background: isSelected ? 'rgba(140,98,57,0.07)' : 'transparent',
+                          cursor: 'pointer', transition: 'all 0.15s'
+                        }}>
+                          {cat.multi ? (
+                            <input type="checkbox" checked={isSelected}
+                              onChange={() => setCustModal(prev => {
+                                const arr = Array.isArray(prev.selections[cat.key]) ? [...prev.selections[cat.key]] : [];
+                                const ni = arr.includes(opt.name) ? arr.filter(x => x !== opt.name) : [...arr, opt.name];
+                                return { ...prev, selections: { ...prev.selections, [cat.key]: ni } };
+                              })}
+                              style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }} />
+                          ) : (
+                            <input type="radio" name={`cust-${cat.key}`} checked={isSelected}
+                              onChange={() => setCustModal(prev => ({ ...prev, selections: { ...prev.selections, [cat.key]: opt.name } }))}
+                              style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }} />
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>{opt.name}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Stock: {opt.currentStock} {opt.unit}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div style={{ padding: '1rem 1.5rem 1.25rem', display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--border)' }}>
+              <button
+                onClick={() => {
+                  if (custModal.step === 0) setCustModal(null);
+                  else setCustModal(prev => ({ ...prev, step: prev.step - 1 }));
+                }}
+                style={{ flex: 1, height: '2.5rem', background: 'var(--border)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+              >
+                <ChevronLeft size={16} /> {custModal.step === 0 ? 'Cancel' : 'Back'}
+              </button>
+
+              {custModal.step < CUST_CATEGORIES.length - 1 ? (
+                <button
+                  onClick={() => setCustModal(prev => ({ ...prev, step: prev.step + 1 }))}
+                  style={{ flex: 2, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => confirmAddToCart(custModal.item, custModal.selections)}
+                  style={{ flex: 2, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                >
+                  <CheckCircle size={16} /> Add to Cart
+                </button>
+              )}
             </div>
           </div>
         </div>

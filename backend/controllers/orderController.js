@@ -74,6 +74,7 @@ export const createOrder = async (req, res) => {
       const quantity = Number(item.quantity || 1);
       const unitPrice = Number(menuItem.price);
       const itemSubtotal = unitPrice * quantity;
+      const itemCustomizations = item.customizations || [];
       
       const itemGst = itemSubtotal * (Number(menuItem.gst_percent) / 100);
 
@@ -84,7 +85,8 @@ export const createOrder = async (req, res) => {
         menu_item_id: menuItem.id,
         quantity,
         unit_price: unitPrice,
-        subtotal: itemSubtotal
+        subtotal: itemSubtotal,
+        customizations: itemCustomizations
       });
 
       // Recipe ingredient stock deduction checks
@@ -187,7 +189,8 @@ export const createOrder = async (req, res) => {
       menu_item_id: pi.menu_item_id,
       quantity: pi.quantity,
       unit_price: pi.unit_price,
-      subtotal: pi.subtotal
+      subtotal: pi.subtotal,
+      customizations: pi.customizations && pi.customizations.length > 0 ? JSON.stringify(pi.customizations) : '[]'
     }));
 
     const { error: itemsErr } = await supabase.from('order_items').insert(itemsInserts);
