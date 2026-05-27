@@ -20,7 +20,8 @@ export const protect = async (req, res, next) => {
 };
 
 export const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === 'Admin') {
+  const role = (req.user && req.user.role || '').toLowerCase();
+  if (role === 'admin') {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized as an Admin' });
@@ -28,7 +29,8 @@ export const adminOnly = (req, res, next) => {
 };
 
 export const managerOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'Admin' || req.user.role === 'Manager')) {
+  const role = (req.user && req.user.role || '').toLowerCase();
+  if (role === 'admin' || role === 'manager') {
     next();
   } else {
     res.status(403).json({ message: 'Not authorized, requires Manager or Admin access' });

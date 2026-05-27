@@ -754,7 +754,7 @@ const POS = ({ auth }) => {
         {/* Cart Billing Footer Renders calculations */}
         <div className="cart-footer" style={{ borderTop: '2px solid var(--border)', background: 'var(--bg-panel)', padding: '1rem' }}>
           
-          <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <form onSubmit={handleCheckout} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             
             {/* Customer Lookup phone */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
