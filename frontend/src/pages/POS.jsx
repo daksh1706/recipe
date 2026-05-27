@@ -26,6 +26,22 @@ import {
   X
 } from 'lucide-react';
 
+const formatStock = (stock, unit) => {
+  const num = Number(stock);
+  if (isNaN(num)) return `${stock} ${unit}`;
+  const lowerUnit = (unit || '').toLowerCase().trim();
+  
+  if (num >= 1000) {
+    if (lowerUnit === 'ml') {
+      return `${Number((num / 1000).toFixed(2))} L`;
+    }
+    if (lowerUnit === 'gm' || lowerUnit === 'g' || lowerUnit === 'grams') {
+      return `${Number((num / 1000).toFixed(2))} Kg`;
+    }
+  }
+  return `${stock} ${unit}`;
+};
+
 const POS = ({ auth }) => {
   const { showToast } = useContext(ToastContext);
   
@@ -1352,7 +1368,7 @@ const POS = ({ auth }) => {
                           )}
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>{opt.name}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Stock: {opt.currentStock} {opt.unit}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Stock: {formatStock(opt.currentStock, opt.unit)}</div>
                           </div>
                         </label>
                       );
