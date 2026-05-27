@@ -83,32 +83,48 @@ const POS = ({ auth }) => {
     { value: 'savoury_bites', label: 'Savoury Bites' }
   ];
 
-  // 1. Fetch Menu Items — with auto-retry for Render cold starts
+  // 1. Fetch Menu Items — with auto-retry only for server/network errors (not auth errors)
   const fetchMenu = async (attempt = 1) => {
     setLoadingMenu(true);
+    // Read token fresh from localStorage each time — most reliable source
+    const token = (() => {
+      try { return JSON.parse(localStorage.getItem('userInfo') || '{}').token || ''; }
+      catch { return ''; }
+    })();
+
+    if (!token) {
+      // No token at all — user not logged in, don't spam requests
+      setLoadingMenu(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/menu', {
-        headers: { 'Authorization': `Bearer ${auth.token}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      const data = await res.json();
+
       if (res.ok) {
+        const data = await res.json();
         setMenuItems(data);
         setLoadingMenu(false);
-      } else if (res.status === 401) {
-        showToast('Session expired — please log in again', 'error');
+      } else if (res.status === 401 || res.status === 403) {
+        // Auth error — never retry, token is bad
+        showToast('Session expired — please log out and log back in.', 'error');
         setLoadingMenu(false);
-      } else if (attempt < 3) {
-        // Auto-retry (handles Render cold start)
-        setTimeout(() => fetchMenu(attempt + 1), 2500);
+      } else if (res.status >= 500 && attempt < 4) {
+        // Server error — retry (Render cold start returns 502/503)
+        setTimeout(() => fetchMenu(attempt + 1), 3000);
       } else {
-        showToast(data.message || 'Failed to load menu. Tap Retry.', 'error');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || `Server error (${res.status}). Tap Retry.`, 'error');
         setLoadingMenu(false);
       }
     } catch (err) {
-      if (attempt < 3) {
-        setTimeout(() => fetchMenu(attempt + 1), 2500);
+      // Network error / timeout — retry
+      if (attempt < 4) {
+        setTimeout(() => fetchMenu(attempt + 1), 3000);
       } else {
-        showToast('Cannot reach server. Check your connection.', 'error');
+        showToast('Cannot reach server. Check connection and tap Retry.', 'error');
         setLoadingMenu(false);
       }
     }
@@ -122,15 +138,20 @@ const POS = ({ auth }) => {
   // Fetch raw materials for customization options
   const fetchRawMaterials = async () => {
     try {
+      const token = (() => {
+        try { return JSON.parse(localStorage.getItem('userInfo') || '{}').token || ''; }
+        catch { return ''; }
+      })();
+      if (!token) return;
       const res = await fetch('/api/inventory', {
-        headers: { 'Authorization': `Bearer ${auth.token}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setRawMaterials(data.filter(m => m.currentStock > 0)); // only in-stock items
+        setRawMaterials(data.filter(m => m.currentStock > 0));
       }
     } catch (err) {
-      // silent — customizations degrade gracefully
+      // silent
     }
   };
 
@@ -145,7 +166,7 @@ const POS = ({ auth }) => {
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/customers/phone/${customerPhone}`, {
-          headers: { 'Authorization': `Bearer ${auth.token}` }
+          headers: { 'Authorization': `Bearer ${(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}').token || ''; } catch { return ''; } })()}` }
         });
         if (res.ok) {
           const data = await res.json();
@@ -317,7 +338,7 @@ const POS = ({ auth }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${auth.token}`
+          'Authorization': `Bearer ${(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}').token || ''; } catch { return ''; } })()}`
         },
         body: JSON.stringify(payload)
       });
@@ -842,18 +863,21 @@ const POS = ({ auth }) => {
                     {item.isAvailable && (
                       <button
                         onClick={(e) => openCustomize(e, item)}
+                        title="Customize this item"
                         style={{
-                          fontSize: '0.65rem', fontWeight: '800',
-                          padding: '0.2rem 0.5rem',
-                          background: 'rgba(140,98,57,0.12)',
+                          fontSize: '0.9rem',
+                          padding: '0.15rem 0.35rem',
+                          background: 'rgba(140,98,57,0.1)',
                           color: 'var(--primary)',
-                          border: '1px solid rgba(140,98,57,0.3)',
-                          borderRadius: '10px',
+                          border: '1px solid rgba(140,98,57,0.25)',
+                          borderRadius: '8px',
                           cursor: 'pointer',
-                          whiteSpace: 'nowrap'
+                          lineHeight: 1,
+                          display: 'flex',
+                          alignItems: 'center'
                         }}
                       >
-                        ✨ Customize
+                        ⚙️
                       </button>
                     )}
                   </div>
