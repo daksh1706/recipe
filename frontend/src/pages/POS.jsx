@@ -819,21 +819,23 @@ const POS = ({ auth }) => {
                   {!item.isAvailable && (
                     <div style={{
                       position: 'absolute',
-                      top: '12px',
-                      right: '12px',
+                      top: '10px',
+                      left: '10px',
                       backgroundColor: 'var(--error)',
                       color: 'white',
-                      fontSize: '0.65rem',
+                      fontSize: '0.6rem',
                       fontWeight: '800',
                       padding: '0.2rem 0.5rem',
                       borderRadius: '10px',
-                      zIndex: 2
+                      zIndex: 2,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase'
                     }}>
                       Out of stock
                     </div>
                   )}
 
-                  {/* Product Image */}
+                  {/* Product Image with floating Customize button */}
                   <div style={{
                     width: '100%',
                     height: '110px',
@@ -854,33 +856,48 @@ const POS = ({ auth }) => {
                         <Coffee size={36} />
                       </div>
                     )}
+
+                    {/* Floating Customize pill — overlaid on image bottom */}
+                    {item.isAvailable && (
+                      <button
+                        onClick={(e) => openCustomize(e, item)}
+                        title="Build Your Own"
+                        className="customize-pill"
+                        style={{
+                          position: 'absolute',
+                          bottom: '0',
+                          left: '0',
+                          right: '0',
+                          height: '28px',
+                          background: 'linear-gradient(135deg, rgba(140,98,57,0.92), rgba(180,130,80,0.92))',
+                          backdropFilter: 'blur(4px)',
+                          color: 'white',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.7rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.04em',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.3rem',
+                          transition: 'opacity 0.2s, transform 0.2s',
+                          opacity: 0,
+                          transform: 'translateY(4px)',
+                          zIndex: 3
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.transform = 'translateY(4px)'; }}
+                      >
+                        <Settings2 size={11} /> BUILD YOUR OWN
+                      </button>
+                    )}
                   </div>
 
                   <span className="pos-item-name">{item.name}</span>
                   <span className="pos-item-category">{item.category.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.25rem' }}>
-                    <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
-                    {item.isAvailable && (
-                      <button
-                        onClick={(e) => openCustomize(e, item)}
-                        title="Customize this item"
-                        style={{
-                          fontSize: '0.9rem',
-                          padding: '0.15rem 0.35rem',
-                          background: 'rgba(140,98,57,0.1)',
-                          color: 'var(--primary)',
-                          border: '1px solid rgba(140,98,57,0.25)',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          lineHeight: 1,
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                      >
-                        ⚙️
-                      </button>
-                    )}
-                  </div>
+                  <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
+
                 </div>
               ))}
             </div>
