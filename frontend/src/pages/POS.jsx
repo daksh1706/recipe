@@ -18,7 +18,8 @@ import {
   Percent,
   CheckCircle,
   HelpCircle,
-  FileText
+  FileText,
+  ShoppingCart
 } from 'lucide-react';
 
 const POS = ({ auth }) => {
