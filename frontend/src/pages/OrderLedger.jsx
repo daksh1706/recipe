@@ -201,9 +201,11 @@ const OrderLedger = () => {
       hour: '2-digit', minute: '2-digit', hour12: false
     });
 
-    doc.text(`Bill No   : ${order.id.substring(0,8).toUpperCase()}`, marginLeft, y);
+    const billNo = `BILL-${orderNo.replace('ORD-', '')}`;
+    const tokenNo = orderNo.replace('ORD-', '');
+    doc.text(`Bill No   : ${billNo}`, marginLeft, y);
     y += 3.5;
-    doc.text(`Order Code: ${orderNo}`, marginLeft, y);
+    doc.text(`Order Code: ${orderNo} (Token: ${tokenNo})`, marginLeft, y);
     y += 3.5;
     doc.text(`Date      : ${dateStr}`, marginLeft, y);
     y += 3.5;

@@ -272,6 +272,8 @@ const POS = ({ auth }) => {
       return;
     }
 
+    const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
+
     const itemsHtml = r.items.map(item => {
       const name = item.menuItem ? item.menuItem.name : 'Coffee Item';
       const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
@@ -343,6 +345,14 @@ const POS = ({ auth }) => {
             <div style="font-size: 9px; margin-bottom: 2px;">101 Gourmet Lane, Coffee Hills, IN</div>
             <div style="font-size: 9px; margin-bottom: 2px;">Phone: +91 98765 43210</div>
             <div style="font-size: 9px;">GSTIN: 29AAAAA1111A1Z1</div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="center" style="margin: 6px 0;">
+            <span style="font-size: 13px; font-weight: bold; border: 1px double #000; padding: 2px 8px; display: inline-block;">
+              KITCHEN TOKEN: ${tokenNumber}
+            </span>
           </div>
           
           <div class="divider"></div>
@@ -450,7 +460,9 @@ const POS = ({ auth }) => {
     // Ticket metadata info
     doc.setFontSize(8);
     doc.setFont('Helvetica', 'bold');
+    const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
     doc.text(`Order: ${r.orderCode}`, 5, 27);
+    doc.text(`Token: ${tokenNumber}`, 50, 27);
     doc.setFont('Helvetica', 'normal');
     doc.text(`Date: ${new Date(r.createdAt).toLocaleString()}`, 5, 31);
     doc.text(`Type: ${r.orderType?.toUpperCase()}`, 5, 35);
