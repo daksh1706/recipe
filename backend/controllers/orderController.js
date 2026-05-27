@@ -1,495 +1,449 @@
 import { supabase } from '../config/supabase.js';
-import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_key_replace_me');
+// Helper to generate ORD-0001, ORD-0002 format
+const generateOrderCode = async () => {
+  try {
+    const { count, error } = await supabase
+      .from('orders')
+      .select('id', { count: 'exact', head: true });
 
-const generateInvoiceAndOrderNumber = async () => {
-  const date = new Date();
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+    if (error) throw error;
 
-  const { count } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', startOfDay.toISOString())
-    .lte('created_at', endOfDay.toISOString());
-
-  const orderNumber = (count || 0) + 1;
-  const dateString = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-  
-  return { invoiceNumber: `BILL-${dateString}-${orderNumber.toString().padStart(4, '0')}`, orderNumber };
+    const nextNum = (count || 0) + 1;
+    return `ORD-${nextNum.toString().padStart(4, '0')}`;
+  } catch (error) {
+    console.error("Error generating order code:", error.message);
+    return `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
 };
 
+// Checkout endpoint
 export const createOrder = async (req, res) => {
-  const { items, paymentMethod, discountAmount = 0, customerPhone, customerName, cashGiven, changeDue, isCheckoutSession, rewardApplied } = req.body;
-  
+  const { 
+    items, 
+    orderType, 
+    order_type,
+    tableNumber, 
+    table_number,
+    discountPercent, 
+    discount_percent,
+    notes,
+    paymentMethod, 
+    payment_method,
+    paymentStatus,
+    payment_status,
+    amountReceived, 
+    amount_received,
+    customerName,
+    customerPhone,
+    customer_phone
+  } = req.body;
+
   if (!items || items.length === 0) {
-    return res.status(400).json({ message: 'No order items' });
+    return res.status(400).json({ message: 'No items in cart' });
   }
+
+  // Parameter mappings
+  const finalOrderType = orderType || order_type || 'takeaway';
+  const finalTableNumber = tableNumber !== undefined ? tableNumber : (table_number !== undefined ? table_number : null);
+  const finalDiscountPercent = Number(discountPercent !== undefined ? discountPercent : (discount_percent !== undefined ? discount_percent : 0));
+  const finalPaymentMethod = (paymentMethod || payment_method || 'cash').toLowerCase();
+  const finalPaymentStatus = (paymentStatus || payment_status || 'paid').toLowerCase();
+  const finalAmountReceived = Number(amountReceived !== undefined ? amountReceived : (amount_received !== undefined ? amount_received : 0));
+  
+  const finalPhone = customerPhone || customer_phone || '';
 
   try {
     let subtotal = 0;
-    const orderItemsData = [];
-    const orderCustomizationsData = [];
-    const stockUpdates = {};
+    let totalGst = 0;
+    const processedItems = [];
+    const stockDeductions = [];
 
-    // Process items
+    // Calculate subtotal, GST, and gather stock deductions
     for (const item of items) {
       const { data: menuItem, error: menuErr } = await supabase
         .from('menu_items')
-        .select('*, recipe:menu_item_recipes(quantity, ingredient:ingredients!ingredient_id(*))')
-        .eq('id', item.menuItemId)
+        .select('*, recipes(*, recipe_ingredients(*, raw_materials(*))))')
+        .eq('id', item.menuItemId || item.menu_item_id)
         .single();
 
       if (menuErr || !menuItem) {
-        return res.status(404).json({ message: `Menu item not found: ${item.menuItemId}` });
+        return res.status(404).json({ message: `Menu item not found: ${item.menuItemId || item.menu_item_id}` });
       }
 
-      let itemSubtotal = menuItem.price * item.quantity;
-      let orderItemTempId = Math.random().toString(36).substring(7); // Used locally to link customizations
-
-      // Process customizations
-      if (item.customizations && item.customizations.length > 0) {
-        for (const cust of item.customizations) {
-          const { data: custItem } = await supabase
-            .from('menu_items')
-            .select('*, recipe:menu_item_recipes(quantity, ingredient:ingredients!ingredient_id(*))')
-            .eq('id', cust.menuItemId)
-            .single();
-
-          if (custItem) {
-            itemSubtotal += custItem.price * item.quantity;
-            orderCustomizationsData.push({
-              _tempItemId: orderItemTempId,
-              menu_item_id: custItem.id,
-              name: custItem.name,
-              price: custItem.price
-            });
-
-            if (custItem.recipe) {
-              for (const recipeItem of custItem.recipe) {
-                if (!recipeItem.ingredient) continue;
-                const totalNeeded = recipeItem.quantity * item.quantity;
-                const ingId = recipeItem.ingredient.id;
-                stockUpdates[ingId] = (stockUpdates[ingId] || recipeItem.ingredient.current_stock) - totalNeeded;
-              }
-            }
-          }
-        }
-      }
+      const quantity = Number(item.quantity || 1);
+      const unitPrice = Number(menuItem.price);
+      const itemSubtotal = unitPrice * quantity;
+      
+      const itemGst = itemSubtotal * (Number(menuItem.gst_percent) / 100);
 
       subtotal += itemSubtotal;
+      totalGst += itemGst;
 
-      orderItemsData.push({
-        _tempItemId: orderItemTempId,
+      processedItems.push({
         menu_item_id: menuItem.id,
-        quantity: item.quantity,
-        price_at_time: menuItem.price,
+        quantity,
+        unit_price: unitPrice,
         subtotal: itemSubtotal
       });
 
-      if (menuItem.recipe) {
-        for (const recipeItem of menuItem.recipe) {
-          if (!recipeItem.ingredient) continue;
-          const totalNeeded = recipeItem.quantity * item.quantity;
-          const ingId = recipeItem.ingredient.id;
-          stockUpdates[ingId] = (stockUpdates[ingId] || recipeItem.ingredient.current_stock) - totalNeeded;
+      // Recipe ingredient stock deduction checks
+      const recipe = menuItem.recipes && menuItem.recipes.length > 0 ? menuItem.recipes[0] : null;
+      if (recipe && recipe.recipe_ingredients) {
+        for (const ri of recipe.recipe_ingredients) {
+          const totalNeeded = Number(ri.quantity) * quantity;
+          stockDeductions.push({
+            raw_material_id: ri.raw_material_id,
+            quantity: totalNeeded,
+            name: ri.raw_materials ? ri.raw_materials.name : 'Unknown Material',
+            current_stock: ri.raw_materials ? Number(ri.raw_materials.current_stock) : 0,
+            unit: ri.unit
+          });
         }
       }
     }
 
-    const taxAmount = subtotal * 0.05;
-    const totalAmount = subtotal + taxAmount - discountAmount;
-    const { invoiceNumber, orderNumber } = await generateInvoiceAndOrderNumber();
+    const discountAmount = subtotal * (finalDiscountPercent / 100);
+    const grandTotal = subtotal + totalGst - discountAmount;
+    const changeToReturn = Math.max(0, finalAmountReceived - grandTotal);
 
-    // Customer logic
+    // Customer setup / update
     let customerId = null;
-    let customerDetails = null;
-    if (customerPhone && customerName) {
-      // Fetch loyalty settings first
-      const { data: loyaltySettings } = await supabase
-        .from('loyalty_settings')
-        .select('*')
-        .limit(1)
-        .single();
-        
-      const pointsToGrant = loyaltySettings?.points_per_order || 1;
-      const threshold = loyaltySettings?.threshold_points || 10;
-
+    if (finalPhone && customerName) {
       const { data: existingCustomer } = await supabase
         .from('customers')
         .select('*')
-        .eq('phone', customerPhone)
-        .single();
+        .eq('phone', finalPhone)
+        .maybeSingle();
 
       if (existingCustomer) {
-        let newLoyaltyPoints = (existingCustomer.loyalty_points || 0);
-        if (rewardApplied) {
-          newLoyaltyPoints = Math.max(0, newLoyaltyPoints - threshold);
-        }
-        newLoyaltyPoints += pointsToGrant;
-
-        let { data: updatedCustomer, error: updateErr } = await supabase
+        const { data: updatedCustomer } = await supabase
           .from('customers')
           .update({
             name: customerName,
-            total_orders: existingCustomer.total_orders + 1,
-            total_spent: existingCustomer.total_spent + totalAmount,
-            loyalty_points: newLoyaltyPoints
+            total_visits: Number(existingCustomer.total_visits || 0) + 1,
+            total_spent: Number(existingCustomer.total_spent || 0) + grandTotal,
+            last_visit_date: new Date().toISOString().split('T')[0]
           })
           .eq('id', existingCustomer.id)
           .select()
           .single();
-
-        if (updateErr) {
-          console.error("Customer update failed (possibly missing loyalty_points column):", updateErr);
-          // Fallback without loyalty_points
-          const { data: fallbackCustomer } = await supabase
-            .from('customers')
-            .update({
-              name: customerName,
-              total_orders: existingCustomer.total_orders + 1,
-              total_spent: existingCustomer.total_spent + totalAmount
-            })
-            .eq('id', existingCustomer.id)
-            .select()
-            .single();
-          updatedCustomer = fallbackCustomer;
-        }
-
+        
         if (updatedCustomer) {
           customerId = updatedCustomer.id;
-          customerDetails = updatedCustomer;
         }
       } else {
-        let { data: newCustomer, error: insertErr } = await supabase
+        const { data: newCustomer } = await supabase
           .from('customers')
           .insert({
-            phone: customerPhone,
             name: customerName,
-            total_orders: 1,
-            total_spent: totalAmount,
-            loyalty_points: pointsToGrant
+            phone: finalPhone,
+            total_visits: 1,
+            total_spent: grandTotal,
+            first_visit_date: new Date().toISOString().split('T')[0],
+            last_visit_date: new Date().toISOString().split('T')[0]
           })
           .select()
           .single();
 
-        if (insertErr) {
-          console.error("Customer insert failed (possibly missing loyalty_points column):", insertErr);
-          // Fallback without loyalty_points
-          const { data: fallbackCustomer } = await supabase
-            .from('customers')
-            .insert({
-              phone: customerPhone,
-              name: customerName,
-              total_orders: 1,
-              total_spent: totalAmount
-            })
-            .select()
-            .single();
-          newCustomer = fallbackCustomer;
-        }
-
         if (newCustomer) {
           customerId = newCustomer.id;
-          customerDetails = newCustomer;
         }
       }
     }
 
-    // Insert Order
+    // Generate Order Code
+    const orderCode = await generateOrderCode();
+
+    // Create Order Record
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .insert({
-        invoice_number: invoiceNumber,
-        order_number: orderNumber,
-        subtotal,
-        tax_amount: taxAmount,
-        discount_amount: discountAmount,
-        total_amount: totalAmount,
-        payment_method: paymentMethod,
-        cash_given: cashGiven || 0,
-        change_due: changeDue || 0,
+        order_code: orderCode,
         customer_id: customerId,
-        cashier_id: req.user ? req.user.id : null,
-        status: isCheckoutSession ? 'Pending Payment' : 'Preparing'
+        order_type: finalOrderType,
+        table_number: finalTableNumber,
+        status: 'pending',
+        subtotal,
+        discount_percent: finalDiscountPercent,
+        discount_amount: discountAmount,
+        gst_amount: totalGst,
+        grand_total: grandTotal,
+        payment_method: finalPaymentMethod,
+        payment_status: finalPaymentStatus,
+        amount_received: finalAmountReceived,
+        change_to_return: changeToReturn,
+        staff_id: req.user ? req.user.id : null,
+        notes: notes || ''
       })
       .select()
       .single();
 
     if (orderErr) throw orderErr;
 
-    // Insert Order Items
-    for (const oi of orderItemsData) {
-      const { data: insertedItem } = await supabase
-        .from('order_items')
-        .insert({
-          order_id: order.id,
-          menu_item_id: oi.menu_item_id,
-          quantity: oi.quantity,
-          price_at_time: oi.price_at_time,
-          subtotal: oi.subtotal
-        })
-        .select()
-        .single();
+    // Create Order Items
+    const itemsInserts = processedItems.map(pi => ({
+      order_id: order.id,
+      menu_item_id: pi.menu_item_id,
+      quantity: pi.quantity,
+      unit_price: pi.unit_price,
+      subtotal: pi.subtotal
+    }));
 
-      // Insert matching customizations
-      const itemCustomizations = orderCustomizationsData.filter(c => c._tempItemId === oi._tempItemId);
-      if (itemCustomizations.length > 0) {
-        await supabase.from('order_item_customizations').insert(
-          itemCustomizations.map(c => ({
-            order_item_id: insertedItem.id,
-            menu_item_id: c.menu_item_id,
-            name: c.name,
-            price: c.price
-          }))
-        );
-      }
-    }
+    const { error: itemsErr } = await supabase.from('order_items').insert(itemsInserts);
+    if (itemsErr) throw itemsErr;
 
-    // Apply inventory deducts
-    for (const [ingId, newStock] of Object.entries(stockUpdates)) {
-      const { data: updatedIng } = await supabase
-        .from('ingredients')
-        .update({ current_stock: newStock })
-        .eq('id', ingId)
-        .select()
-        .single();
+    // Deduct stock from raw materials and log transaction
+    for (const ded of stockDeductions) {
+      const newStock = Math.max(0, ded.current_stock - ded.quantity);
       
-      if (req.io && updatedIng) {
-        req.io.emit('inventory_updated', { type: 'update', item: { _id: updatedIng.id, name: updatedIng.name, currentStock: updatedIng.current_stock } });
+      // Update inventory stock
+      await supabase
+        .from('raw_materials')
+        .update({ current_stock: newStock })
+        .eq('id', ded.raw_material_id);
+
+      // Log stock transaction
+      await supabase.from('stock_transactions').insert({
+        raw_material_id: ded.raw_material_id,
+        transaction_type: 'deduction',
+        quantity: ded.quantity,
+        reference_id: order.id,
+        notes: `POS order ${orderCode} sales deduction`
+      });
+
+      // Emit real time socket notifications if stock is low
+      if (req.io) {
+        req.io.emit('inventory_updated', { 
+          type: 'update', 
+          item: { _id: ded.raw_material_id, currentStock: newStock, name: ded.name } 
+        });
       }
     }
 
-    // Format response to match old schema
-    const { data: populatedOrder } = await supabase
+    // Fetch complete populated order for frontend mapping
+    const { data: populated } = await supabase
       .from('orders')
-      .select('*, customer:customers(*), cashier:users(username), items:order_items(*, menuItem:menu_items(*), customizations:order_item_customizations(*))')
+      .select('*, customer:customers(*), staff:users(*), order_items(*, menu_items(*))')
       .eq('id', order.id)
       .single();
 
-    // Helper function to map Supabase snake_case to frontend camelCase
-    const formatOrderForFrontend = (o) => {
-      if (!o) return o;
-      return {
-        ...o,
-        _id: o.id,
-        createdAt: o.created_at,
-        invoiceNumber: o.invoice_number,
-        orderNumber: o.order_number,
-        taxAmount: o.tax_amount,
-        discountAmount: o.discount_amount,
-        totalAmount: o.total_amount,
-        paymentMethod: o.payment_method,
-        cashGiven: o.cash_given,
-        changeDue: o.change_due,
-        customerDetails: o.customer,
-        items: o.items ? o.items.map(i => ({
-          ...i,
-          menuItemId: i.menu_item_id,
-          priceAtTime: i.price_at_time
-        })) : []
-      };
+    const responseOrder = {
+      ...populated,
+      _id: populated.id,
+      orderCode: populated.order_code,
+      orderType: populated.order_type,
+      tableNumber: populated.table_number,
+      discountPercent: Number(populated.discount_percent),
+      discountAmount: Number(populated.discount_amount),
+      gstAmount: Number(populated.gst_amount),
+      grandTotal: Number(populated.grand_total),
+      paymentMethod: populated.payment_method,
+      paymentStatus: populated.payment_status,
+      amountReceived: Number(populated.amount_received),
+      changeToReturn: Number(populated.change_to_return),
+      createdAt: populated.created_at,
+      updatedAt: populated.updated_at,
+      customer: populated.customer ? {
+        ...populated.customer,
+        _id: populated.customer.id,
+        totalVisits: Number(populated.customer.total_visits),
+        totalSpent: Number(populated.customer.total_spent)
+      } : null,
+      items: populated.order_items ? populated.order_items.map(oi => ({
+        ...oi,
+        _id: oi.id,
+        menuItemId: oi.menu_item_id,
+        unitPrice: Number(oi.unit_price),
+        subtotal: Number(oi.subtotal),
+        menuItem: oi.menu_items
+      })) : []
     };
 
-    const responseData = formatOrderForFrontend(populatedOrder);
-
     if (req.io) {
-      req.io.emit('order_created', responseData);
+      req.io.emit('order_created', responseOrder);
     }
 
-    if (isCheckoutSession) {
-      if (!process.env.STRIPE_SECRET_KEY) {
-        return res.json({ url: `${req.headers.origin}/payment-success?order_id=${order.id}` });
-      }
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [{
-          price_data: { 
-            currency: 'inr', 
-            product_data: { name: `CRFTD Order ${invoiceNumber}` }, 
-            unit_amount: Math.round(totalAmount * 100) 
-          },
-          quantity: 1,
-        }],
-        mode: 'payment',
-        client_reference_id: order.id,
-        success_url: `${req.headers.origin}/payment-success?order_id=${order.id}`,
-        cancel_url: `${req.headers.origin}/`,
-      });
-      return res.json({ url: session.url });
-    }
-
-    res.status(201).json(responseData);
-
+    res.status(201).json(responseOrder);
   } catch (error) {
-    console.error('Checkout error:', error);
+    console.error("POS Checkout error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
+// Retrieve historical orders (Order Ledger) with filters
 export const getOrders = async (req, res) => {
   try {
-    const { data: orders, error } = await supabase
+    const { status, type, payment, staff, startDate, endDate, search } = req.query;
+
+    let query = supabase
       .from('orders')
-      .select('*, customer:customers(*), cashier:users(username), items:order_items(*, menuItem:menu_items(*), customizations:order_item_customizations(*))')
+      .select('*, customer:customers(*), staff:users(*), order_items(*, menu_items(*))')
       .order('created_at', { ascending: false });
 
+    // Apply filters
+    if (status) query = query.eq('status', status.toLowerCase());
+    if (type) query = query.eq('order_type', type.toLowerCase());
+    if (payment) query = query.eq('payment_method', payment.toLowerCase());
+    if (staff) query = query.eq('staff_id', staff);
+
+    if (startDate) query = query.gte('created_at', new Date(startDate).toISOString());
+    if (endDate) query = query.lte('created_at', new Date(endDate).toISOString());
+
+    const { data: orders, error } = await query;
     if (error) throw error;
-    
-    const formatOrderForFrontend = (o) => {
-      if (!o) return o;
-      return {
-        ...o,
-        _id: o.id,
-        createdAt: o.created_at,
-        invoiceNumber: o.invoice_number,
-        orderNumber: o.order_number,
-        taxAmount: o.tax_amount,
-        discountAmount: o.discount_amount,
-        totalAmount: o.total_amount,
-        paymentMethod: o.payment_method,
-        cashGiven: o.cash_given,
-        changeDue: o.change_due,
-        customerDetails: o.customer,
-        items: o.items ? o.items.map(i => ({
-          ...i,
-          menuItemId: i.menu_item_id,
-          priceAtTime: i.price_at_time
-        })) : []
-      };
-    };
-    
-    // Quick format for frontend compatibility
-    const formatted = orders.map(formatOrderForFrontend);
+
+    // Filter by search (order_code, customer name, customer phone)
+    let filtered = orders;
+    if (search) {
+      const term = search.toLowerCase();
+      filtered = orders.filter(o => 
+        o.order_code.toLowerCase().includes(term) ||
+        (o.customer && o.customer.name.toLowerCase().includes(term)) ||
+        (o.customer && o.customer.phone.includes(term))
+      );
+    }
+
+    // Format response
+    const formatted = filtered.map(o => ({
+      ...o,
+      _id: o.id,
+      orderCode: o.order_code,
+      orderType: o.order_type,
+      tableNumber: o.table_number,
+      discountPercent: Number(o.discount_percent),
+      discountAmount: Number(o.discount_amount),
+      gstAmount: Number(o.gst_amount),
+      grandTotal: Number(o.grand_total),
+      paymentMethod: o.payment_method,
+      paymentStatus: o.payment_status,
+      createdAt: o.created_at,
+      customer: o.customer ? { ...o.customer, _id: o.customer.id } : null,
+      items: o.order_items ? o.order_items.map(oi => ({
+        ...oi,
+        _id: oi.id,
+        menuItemId: oi.menu_item_id,
+        unitPrice: Number(oi.unit_price),
+        subtotal: Number(oi.subtotal),
+        menuItem: oi.menu_items
+      })) : []
+    }));
+
     res.json(formatted);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+// Update order status (Pending -> Preparing -> Ready -> Served)
 export const updateOrderStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['pending', 'preparing', 'ready', 'served', 'cancelled'].includes(status.toLowerCase())) {
+    return res.status(400).json({ message: 'Invalid order status' });
+  }
+
   try {
-    const { status } = req.body;
+    // Check old status
+    const { data: oldOrder, error: oldErr } = await supabase
+      .from('orders')
+      .select('status, order_code')
+      .eq('id', id)
+      .single();
+
+    if (oldErr || !oldOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
     const { data: order, error } = await supabase
       .from('orders')
-      .update({ status })
-      .eq('id', req.params.id)
-      .select('*, customer:customers(*), cashier:users(username), items:order_items(*, menuItem:menu_items(*), customizations:order_item_customizations(*))')
+      .update({ status: status.toLowerCase(), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*, customer:customers(*), staff:users(*), order_items(*, menu_items(*))')
       .single();
 
     if (error) throw error;
 
-    const formatOrderForFrontend = (o) => {
-      if (!o) return o;
-      return {
-        ...o,
-        _id: o.id,
-        createdAt: o.created_at,
-        invoiceNumber: o.invoice_number,
-        orderNumber: o.order_number,
-        taxAmount: o.tax_amount,
-        discountAmount: o.discount_amount,
-        totalAmount: o.total_amount,
-        paymentMethod: o.payment_method,
-        cashGiven: o.cash_given,
-        changeDue: o.change_due,
-        customerDetails: o.customer,
-        items: o.items ? o.items.map(i => ({
-          ...i,
-          menuItemId: i.menu_item_id,
-          priceAtTime: i.price_at_time
-        })) : []
-      };
+    // IF status changed to cancelled AND it wasn't already cancelled, restore inventory stocks!
+    if (status.toLowerCase() === 'cancelled' && oldOrder.status !== 'cancelled') {
+      console.log(`Reverting stock deductions for cancelled order: ${oldOrder.order_code}`);
+      
+      // Fetch ingredients to restore
+      for (const item of order.order_items) {
+        const { data: menuItem } = await supabase
+          .from('menu_items')
+          .select('*, recipes(*, recipe_ingredients(*, raw_materials(*))))')
+          .eq('id', item.menu_item_id)
+          .single();
+
+        if (menuItem && menuItem.recipes && menuItem.recipes.length > 0) {
+          const recipe = menuItem.recipes[0];
+          if (recipe.recipe_ingredients) {
+            for (const ri of recipe.recipe_ingredients) {
+              const totalRestore = Number(ri.quantity) * Number(item.quantity);
+              
+              if (ri.raw_materials) {
+                const current = Number(ri.raw_materials.current_stock || 0);
+                const restoredStock = current + totalRestore;
+
+                // Update stock in raw_materials
+                await supabase
+                  .from('raw_materials')
+                  .update({ current_stock: restoredStock })
+                  .eq('id', ri.raw_material_id);
+
+                // Log cancellation restock transaction
+                await supabase.from('stock_transactions').insert({
+                  raw_material_id: ri.raw_material_id,
+                  transaction_type: 'restock',
+                  quantity: totalRestore,
+                  reference_id: id,
+                  notes: `Restored from cancelled POS order ${oldOrder.order_code}`
+                });
+
+                if (req.io) {
+                  req.io.emit('inventory_updated', {
+                    type: 'update',
+                    item: { _id: ri.raw_material_id, currentStock: restoredStock, name: ri.raw_materials.name }
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const formatted = {
+      ...order,
+      _id: order.id,
+      orderCode: order.order_code,
+      orderType: order.order_type,
+      tableNumber: order.table_number,
+      discountPercent: Number(order.discount_percent),
+      discountAmount: Number(order.discount_amount),
+      gstAmount: Number(order.gst_amount),
+      grandTotal: Number(order.grand_total),
+      paymentMethod: order.payment_method,
+      paymentStatus: order.payment_status,
+      createdAt: order.created_at,
+      customer: order.customer ? { ...order.customer, _id: order.customer.id } : null,
+      items: order.order_items ? order.order_items.map(oi => ({
+        ...oi,
+        _id: oi.id,
+        menuItemId: oi.menu_item_id,
+        unitPrice: Number(oi.unit_price),
+        subtotal: Number(oi.subtotal),
+        menuItem: oi.menu_items
+      })) : []
     };
 
-    const formatted = formatOrderForFrontend(order);
     if (req.io) {
       req.io.emit('order_status_updated', formatted);
     }
+
     res.json(formatted);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const createPaymentIntent = async (req, res) => {
-  const { amount } = req.body;
-  try {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return res.json({ clientSecret: 'pi_mock_secret_for_testing' });
-    }
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), 
-      currency: 'inr',
-      payment_method_types: ['upi'],
-    });
-    res.json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const createCheckoutSession = async (req, res) => {
-  res.status(400).json({ message: 'Use createOrder with isCheckoutSession flag' });
-};
-
-export const confirmStripePayment = async (req, res) => {
-  try {
-    const { order_id } = req.body;
-    
-    const { data: checkOrder } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', order_id)
-      .single();
-
-    if (!checkOrder) return res.status(404).json({ message: 'Order not found' });
-
-    let finalOrder = checkOrder;
-
-    if (checkOrder.status === 'Pending Payment') {
-      const { data: updated } = await supabase
-        .from('orders')
-        .update({ status: 'Completed' })
-        .eq('id', order_id)
-        .select('*, customer:customers(*), cashier:users(username), items:order_items(*, menuItem:menu_items(*), customizations:order_item_customizations(*))')
-        .single();
-      
-      finalOrder = updated;
-      
-      if (req.io) {
-        req.io.emit('order_status_updated', {...updated, _id: updated.id});
-      }
-    }
-
-    const formatOrderForFrontend = (o) => {
-      if (!o) return o;
-      return {
-        ...o,
-        _id: o.id,
-        createdAt: o.created_at,
-        invoiceNumber: o.invoice_number,
-        orderNumber: o.order_number,
-        taxAmount: o.tax_amount,
-        discountAmount: o.discount_amount,
-        totalAmount: o.total_amount,
-        paymentMethod: o.payment_method,
-        cashGiven: o.cash_given,
-        changeDue: o.change_due,
-        customerDetails: o.customer,
-        items: o.items ? o.items.map(i => ({
-          ...i,
-          menuItemId: i.menu_item_id,
-          priceAtTime: i.price_at_time
-        })) : []
-      };
-    };
-
-    res.json(formatOrderForFrontend(finalOrder));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

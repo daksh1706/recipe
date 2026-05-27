@@ -1,1193 +1,849 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { ToastContext } from '../App';
 import { jsPDF } from 'jspdf';
-import { ChefHat, X, CheckCircle, Printer, MessageSquare, Search, Info, Plus, CreditCard, Smartphone, Banknote, Coffee, Utensils, Download, ChevronRight, ChevronLeft, ShoppingCart, GlassWater, Gift } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { 
+  Search, 
+  Trash2, 
+  Plus, 
+  Minus, 
+  User, 
+  Phone, 
+  Tag, 
+  Printer, 
+  Download, 
+  Share2, 
+  Coffee, 
+  Compass,
+  CreditCard,
+  Percent,
+  CheckCircle,
+  HelpCircle,
+  FileText
+} from 'lucide-react';
 
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught an error", error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return <div style={{ padding: '2rem', color: 'red' }}><h1>Something went wrong.</h1><pre>{this.state.error.toString()}</pre><pre>{this.state.error.stack}</pre></div>;
-    }
-    return this.props.children; 
-  }
-}
-
-const POSInner = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+const POS = ({ auth }) => {
+  const { showToast } = useContext(ToastContext);
+  
+  // Data State
   const [menuItems, setMenuItems] = useState([]);
-  const [activeTab, setActiveTab] = useState('All Items');
+  const [loadingMenu, setLoadingMenu] = useState(true);
+  
+  // Search & Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Cart State
   const [cart, setCart] = useState([]);
-  const [discountPercent, setDiscountPercent] = useState('');
-  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('Stripe');
   
-  // Checkout Modals State
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState(null);
-  
-  // Product Details Modal State
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
-  // Customer Form State
+  // Customer & Billing details
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
-  const [customerLoading, setCustomerLoading] = useState(false);
-  const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState(0);
-  const [loyaltySettings, setLoyaltySettings] = useState(null);
-  const [rewardApplied, setRewardApplied] = useState(false);
-
-  // Payment Flow States
-  // Removed upiQRData
-  const [cardAwaiting, setCardAwaiting] = useState(false);
-
-  // Customization State
-  const [selectedCustomizations, setSelectedCustomizations] = useState([]);
+  const [isNewCustomer, setIsNewCustomer] = useState(true);
+  const [orderType, setOrderType] = useState('takeaway'); // dine_in, takeaway, delivery
+  const [tableNumber, setTableNumber] = useState('');
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountOptions, setDiscountOptions] = useState(() => {
+    const saved = localStorage.getItem('discountConfig');
+    return saved ? JSON.parse(saved) : [0, 5, 10, 15, 20];
+  });
+  const [paymentMethod, setPaymentMethod] = useState('cash'); // cash, upi, card
+  const [amountReceived, setAmountReceived] = useState('');
+  const [notes, setNotes] = useState('');
   
-  // Payment variables missing state
-  const [cashGiven, setCashGiven] = useState('');
+  // Post-Checkout State (Receipt Generator Modal)
+  const [activeReceipt, setActiveReceipt] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // Builder Wizard State
-  const [showBuilder, setShowBuilder] = useState(false);
-  const [builderStep, setBuilderStep] = useState(0); 
-  const [builderBase, setBuilderBase] = useState(null);
-  const [builderCustomizations, setBuilderCustomizations] = useState([]);
+  // Categories list mapped from requirements
+  const categories = [
+    { value: 'all', label: 'All Items' },
+    { value: 'hot_coffee', label: 'Hot Coffee' },
+    { value: 'cold_coffee', label: 'Cold Coffee' },
+    { value: 'frappuccino', label: 'Frappuccino' },
+    { value: 'soda', label: 'Sodas' },
+    { value: 'light_bites', label: 'Light Bites' },
+    { value: 'savoury_bites', label: 'Savoury Bites' }
+  ];
 
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('build') === 'true') {
-      setShowBuilder(true);
-      setBuilderStep(0);
-      setBuilderBase(null);
-      setBuilderCustomizations([]);
-      // Clear URL parameter so it doesn't re-trigger
-      navigate('/pos', { replace: true });
+  // 1. Fetch Menu Items
+  const fetchMenu = async () => {
+    try {
+      const res = await fetch('/api/menu', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMenuItems(data);
+      } else {
+        showToast(data.message || 'Failed to fetch menu', 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoadingMenu(false);
     }
-  }, [location, navigate]);
+  };
 
   useEffect(() => {
     fetchMenu();
-    fetchLoyaltySettings();
   }, []);
 
-  const fetchLoyaltySettings = async () => {
-    try {
-      const res = await fetch('/api/loyalty-settings');
-      if (res.ok) {
-        setLoyaltySettings(await res.json());
-      }
-    } catch (err) {
-      console.error('Failed to fetch loyalty settings', err);
-    }
-  };
-
-  const fetchMenu = async () => {
-    try {
-      const res = await fetch('/api/menu');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setMenuItems(data);
-      } else {
-        console.error('API returned non-array data:', data);
-        setMenuItems([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch menu', err);
-      setMenuItems([]);
-    }
-  };
-
-  const checkCustomerPhone = async (phone) => {
-    if (phone.length >= 10) {
-      setCustomerLoading(true);
-      try {
-        const res = await fetch(`/api/customers/${phone}`);
-        if (res.ok) {
+  // 2. Real-time Customer Phone Lookup Suggestions
+  useEffect(() => {
+    const lookupCustomer = async () => {
+      if (customerPhone.length === 10) {
+        try {
+          const res = await fetch(`/api/customers/phone/${customerPhone}`, {
+            headers: { 'Authorization': `Bearer ${auth.token}` }
+          });
           const data = await res.json();
-          setCustomerName(data.name);
-          setCustomerLoyaltyPoints(data.loyaltyPoints || data.loyalty_points || 0);
-        } else {
-          setCustomerLoyaltyPoints(0);
+          if (res.ok && data) {
+            setCustomerName(data.name);
+            setIsNewCustomer(false);
+            showToast(`VIP Customer ${data.name} identified! Visits: ${data.totalVisits || 0}`, 'success');
+          } else {
+            setIsNewCustomer(true);
+          }
+        } catch (err) {
+          // ignore lookup errors
         }
-      } catch (err) {
-        console.error('Customer not found');
-        setCustomerLoyaltyPoints(0);
-      } finally {
-        setCustomerLoading(false);
       }
-    } else {
-      setCustomerLoyaltyPoints(0);
+    };
+    lookupCustomer();
+  }, [customerPhone]);
+
+  // 3. Cart Functions
+  const addToCart = (item) => {
+    if (!item.isAvailable) {
+      showToast(`${item.name} is currently out of stock!`, 'warning');
+      return;
     }
-  };
 
-  const addToCart = (item, e = null) => {
-    if (e) e.stopPropagation();
-    const customIds = selectedCustomizations.map(c => c._id).sort().join(',');
-    const cartItemId = item._id + customIds;
+    const savedGst = localStorage.getItem('gstConfig');
+    const gstConfig = savedGst ? JSON.parse(savedGst) : {};
+    const finalGstPercent = gstConfig[item.category] !== undefined ? Number(gstConfig[item.category]) : (item.gstPercent || 5.0);
 
-    const formattedCustomizations = selectedCustomizations.map(c => ({
-      menuItemId: c._id,
-      name: c.name,
-      price: c.price
-    }));
-
-    setCart((prev) => {
-      const existing = prev.find(i => i.cartItemId === cartItemId);
-      if (existing) {
-        return prev.map(i => i.cartItemId === cartItemId ? { ...i, qty: i.qty + 1 } : i);
+    setCart(prev => {
+      const idx = prev.findIndex(cartItem => cartItem._id === item._id);
+      if (idx > -1) {
+        const updated = [...prev];
+        updated[idx].quantity += 1;
+        return updated;
+      } else {
+        return [...prev, {
+          _id: item._id,
+          name: item.name,
+          price: item.price,
+          gstPercent: finalGstPercent,
+          quantity: 1
+        }];
       }
-      return [...prev, { ...item, cartItemId, qty: 1, customizations: formattedCustomizations }];
     });
-    setSelectedProduct(null);
-    setSelectedCustomizations([]);
   };
 
-  const updateQty = (cartItemId, delta) => {
-    setCart(prev => prev.map(i => {
-      if (i.cartItemId === cartItemId) {
-        const newQty = Math.max(0, i.qty + delta);
-        return { ...i, qty: newQty };
-      }
-      return i;
-    }).filter(i => i.qty > 0));
+  const updateQuantity = (id, delta) => {
+    setCart(prev => {
+      return prev.map(item => {
+        if (item._id === id) {
+          const newQty = item.quantity + delta;
+          return newQty > 0 ? { ...item, quantity: newQty } : null;
+        }
+        return item;
+      }).filter(Boolean);
+    });
   };
 
-  const subtotal = cart.reduce((sum, item) => {
-    const customPrice = item.customizations ? item.customizations.reduce((s, c) => s + c.price, 0) : 0;
-    return sum + ((item.price + customPrice) * item.qty);
-  }, 0);
-  
-  let discountVal = Number(discountPercent) || 0;
-  if (rewardApplied && loyaltySettings && loyaltySettings.rewardType === 'discount') {
-    discountVal += Number(loyaltySettings.rewardValue);
-  }
-  
-  const discountAmount = (subtotal * Math.min(100, discountVal)) / 100;
-  const subtotalAfterDiscount = subtotal - discountAmount;
-  const gst = subtotalAfterDiscount * 0.05; // 5% GST
-  let total = subtotalAfterDiscount + gst;
-  
-  // Quick fix for "free_dish" visual deduction, if needed, though simple setup applies 100% discount to one item or just logs it.
-  // We'll trust the checkout handles the text.
-
-
-  const groupedCustomizations = {
-    Flavour: menuItems.filter(i => i.isCustomization && i.customizationType === 'Flavour'),
-    Topping: menuItems.filter(i => i.isCustomization && i.customizationType === 'Topping'),
-    Filling: menuItems.filter(i => i.isCustomization && i.customizationType === 'Filling'),
-    Syrup: menuItems.filter(i => i.isCustomization && i.customizationType === 'Syrup')
+  const removeFromCart = (id) => {
+    setCart(prev => prev.filter(item => item._id !== id));
   };
 
-  const PREDEFINED_CATEGORIES = ['Waffles', 'Pancakes', 'Coffee', 'Shakes', 'Smoothies'];
-  const displayCategories = ['All Items', ...PREDEFINED_CATEGORIES];
+  // 4. POS Pricing Math Calculations
+  const calculateCart = () => {
+    let subtotal = 0;
+    let totalGst = 0;
 
-  const getCategoryIcon = (catName) => {
-    const name = catName.toLowerCase();
-    if (name.includes('smoothie')) return <GlassWater size={24} />;
-    if (name.includes('drink') || name.includes('beverage') || name.includes('coffee') || name.includes('shake')) return <Coffee size={24} />;
-    if (name.includes('all items')) return <ChefHat size={24} />;
-    return <Utensils size={24} />;
+    cart.forEach(item => {
+      const price = Number(item.price);
+      const qty = Number(item.quantity);
+      subtotal += price * qty;
+      totalGst += (price * qty) * ((item.gstPercent || 5.0) / 100);
+    });
+
+    const discountAmount = subtotal * (Number(discountPercent) / 100);
+    const grandTotal = subtotal + totalGst - discountAmount;
+    const changeToReturn = paymentMethod === 'cash' && amountReceived 
+      ? Math.max(0, Number(amountReceived) - grandTotal) 
+      : 0;
+
+    return {
+      subtotal: Number(subtotal.toFixed(2)),
+      totalGst: Number(totalGst.toFixed(2)),
+      discountAmount: Number(discountAmount.toFixed(2)),
+      grandTotal: Number(grandTotal.toFixed(2)),
+      changeToReturn: Number(changeToReturn.toFixed(2))
+    };
   };
 
-  const handleCheckoutInit = () => {
-    if (cart.length === 0) return alert('Cart is empty!');
-    setShowCustomerModal(true);
-  };
+  const totals = calculateCart();
 
-  const handlePaymentInit = async (e) => {
+  // 5. Place POS Order Checkouts
+  const handleCheckout = async (e) => {
     e.preventDefault();
-    
-    // Redirect to Stripe for UPI/Online Payments
-    if (paymentMethod === 'UPI') {
-      handleProcessOrder(true);
+    if (cart.length === 0) {
+      showToast('Cart is empty', 'warning');
       return;
     }
-    
-    if (paymentMethod === 'Card' && !cardAwaiting) {
-      setCardAwaiting(true);
-      return;
-    }
-    
-    handleProcessOrder(false);
-  };
 
-  const handleProcessOrder = async (isCheckoutSession = false) => {
-    setIsProcessing(true);
+    if (orderType === 'dine_in' && !tableNumber) {
+      showToast('Please enter a Table Number for dine-in order', 'warning');
+      return;
+    }
+
+    if (paymentMethod === 'cash' && (!amountReceived || Number(amountReceived) < totals.grandTotal)) {
+      showToast('Amount received must be at least equal to Grand Total', 'warning');
+      return;
+    }
+
+    setCheckoutLoading(true);
+
+    const payload = {
+      items: cart.map(i => ({ menuItemId: i._id, quantity: i.quantity })),
+      orderType,
+      tableNumber: orderType === 'dine_in' ? Number(tableNumber) : null,
+      discountPercent: Number(discountPercent),
+      notes,
+      paymentMethod,
+      paymentStatus: 'paid', // POS orders are paid immediately
+      amountReceived: paymentMethod === 'cash' ? Number(amountReceived) : totals.grandTotal,
+      customerName: customerName || null,
+      customerPhone: customerPhone || null
+    };
 
     try {
-      const orderItems = cart.map(item => ({
-        menuItemId: item._id,
-        quantity: item.qty,
-        customizations: item.customizations || []
-      }));
-
-      const changeDueAmt = paymentMethod === 'Cash' && cashGiven ? Number(cashGiven) - total : 0;
-
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${auth.token}`
         },
-        body: JSON.stringify({
-          items: orderItems,
-          paymentMethod,
-          discountAmount,
-          customerPhone,
-          customerName,
-          cashGiven: paymentMethod === 'Cash' ? Number(cashGiven) : 0,
-          changeDue: changeDueAmt,
-          isCheckoutSession,
-          rewardApplied
-        })
+        body: JSON.stringify(payload)
       });
-
       const data = await res.json();
-      if (res.ok) {
-        if (isCheckoutSession && data.url) {
-          window.location.href = data.url;
-          return;
-        }
 
-        setCompletedOrder(data);
-        setShowCustomerModal(false);
-        setShowSuccessModal(true);
+      if (res.ok) {
+        showToast(`Order placed successfully! ID: ${data.orderCode}`, 'success');
+        setActiveReceipt(data);
+        setShowReceiptModal(true);
+        
+        // Reset POS state
         setCart([]);
-        setCustomerPhone('');
         setCustomerName('');
-        setCustomerLoyaltyPoints(0);
-        setRewardApplied(false);
-        setCashGiven('');
-        setCardAwaiting(false);
+        setCustomerPhone('');
+        setTableNumber('');
+        setDiscountPercent(0);
+        setAmountReceived('');
+        setNotes('');
       } else {
-        alert(data.message || 'Failed to process order');
+        showToast(data.message || 'Checkout failed', 'error');
       }
     } catch (err) {
-      console.error(err);
-      alert('Error processing order');
+      showToast(err.message, 'error');
     } finally {
-      setIsProcessing(false);
+      setCheckoutLoading(false);
     }
   };
 
+  // 6. Thermal PDF Generator (jsPDF) using Coffee Shop Theme Palette
+  const generatePDF = () => {
+    if (!activeReceipt) return;
+    const r = activeReceipt;
 
-  const getReceiptDoc = () => {
-    if (!completedOrder) return null;
-    
-    // Create an 80mm wide document. Height adjusts roughly based on content.
+    // Create a 80mm thermal receipt width format [80mm, 200mm] -> converted to points
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [80, 280]
+      format: [80, 220]
     });
 
-    // Use Courier for monospace alignment
-    doc.setFont('courier', 'normal');
-    doc.setFontSize(8); 
+    doc.setFont('Helvetica', 'normal');
     
-    let y = 10;
-    const marginLeft = 4;
-    
-    // Utility for monospace dividers (42 characters wide)
-    const doubleLine = "==========================================";
-    const singleLine = "------------------------------------------";
-
-    // --- TOKEN SECTION ---
+    // Header Cafe Letterhead details
     doc.setFontSize(12);
-    doc.setFont('courier', 'bold');
-    doc.text("          KITCHEN TOKEN", marginLeft, y);
+    doc.setFont('Helvetica', 'bold');
+    doc.text('CRFTD COFFEE SHOP', 40, 12, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setFont('Helvetica', 'normal');
+    doc.text('101 Gourmet Lane, Coffee Hills, IN', 40, 16, { align: 'center' });
+    doc.text('Phone: +91 98765 43210  |  GSTIN: 29AAAAA1111A1Z1', 40, 19, { align: 'center' });
+    
+    doc.line(5, 22, 75, 22); // dashed divider line
+
+    // Ticket metadata info
+    doc.setFontSize(8);
+    doc.setFont('Helvetica', 'bold');
+    doc.text(`Order: ${r.orderCode}`, 5, 27);
+    doc.setFont('Helvetica', 'normal');
+    doc.text(`Date: ${new Date(r.createdAt).toLocaleString()}`, 5, 31);
+    doc.text(`Type: ${r.orderType?.toUpperCase()}`, 5, 35);
+    if (r.tableNumber) doc.text(`Table: #${r.tableNumber}`, 50, 35);
+    
+    if (r.customer) {
+      doc.text(`Guest: ${r.customer.name} (${r.customer.phone})`, 5, 39);
+    }
+
+    doc.line(5, 42, 75, 42); // divider
+
+    // Itemized table header columns
+    doc.setFont('Helvetica', 'bold');
+    doc.text('Item Description', 5, 46);
+    doc.text('Qty', 45, 46);
+    doc.text('Price', 53, 46);
+    doc.text('Total', 67, 46);
+    
+    doc.line(5, 48, 75, 48); // divider
+    
+    // Render product items
+    doc.setFont('Helvetica', 'normal');
+    let y = 52;
+    r.items.forEach(item => {
+      const name = item.menuItem ? item.menuItem.name : 'Coffee Item';
+      // Truncate name if too long
+      const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
+      
+      doc.text(displayName, 5, y);
+      doc.text(String(item.quantity), 46, y);
+      doc.text(String(Number(item.unitPrice).toFixed(1)), 53, y);
+      doc.text(String(Number(item.subtotal).toFixed(1)), 67, y);
+      y += 5;
+    });
+
+    doc.line(5, y, 75, y); // divider
+    y += 4;
+
+    // Billing Totals summary
+    doc.text('Subtotal:', 40, y);
+    doc.text(String(Number(r.subtotal).toFixed(2)), 67, y);
+    y += 4;
+
+    if (Number(r.discountAmount) > 0) {
+      doc.text(`Discount (${r.discountPercent}%):`, 40, y);
+      doc.text(`-${Number(r.discountAmount).toFixed(2)}`, 67, y);
+      y += 4;
+    }
+
+    doc.text('GST (5% Collected):', 40, y);
+    doc.text(String(Number(r.gstAmount).toFixed(2)), 67, y);
     y += 5;
-    doc.setFontSize(10);
-    doc.text("              CRFTD", marginLeft, y);
-    y += 6;
-    
-    doc.setFontSize(14);
-    const orderNo = completedOrder.orderNumber || completedOrder.invoiceNumber.split('-')[1] || 'N/A';
-    doc.text(`      Order No: ${orderNo}`, marginLeft, y);
+
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('GRAND TOTAL:', 35, y);
+    doc.text(`INR ${Number(r.grandTotal).toFixed(2)}`, 67, y);
     doc.setFontSize(8);
-    doc.setFont('courier', 'normal');
-    y += 6;
-    
-    const cNameToken = completedOrder.customerDetails?.name || 'Walk-in';
-    const cPhoneToken = completedOrder.customerDetails?.phone || '';
-    doc.text(`Name : ${cNameToken}`, marginLeft, y);
-    y += 4;
-    if (cPhoneToken) {
-      doc.text(`Phone: +91 ${cPhoneToken}`, marginLeft, y);
-      y += 4;
-    }
-    const timeStrToken = new Date(completedOrder.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute:'2-digit' });
-    doc.text(`Time : ${timeStrToken}`, marginLeft, y);
+    doc.setFont('Helvetica', 'normal');
+    y += 5;
+
+    doc.line(5, y, 75, y); // divider
     y += 4;
 
-    doc.text(singleLine, marginLeft, y);
+    doc.text(`Payment: ${r.paymentMethod?.toUpperCase()} (${r.paymentStatus?.toUpperCase()})`, 5, y);
     y += 4;
-    
-    doc.setFont('courier', 'bold');
-    doc.text("QTY   ITEM", marginLeft, y);
-    doc.setFont('courier', 'normal');
-    y += 4;
-    doc.text(singleLine, marginLeft, y);
-    y += 4;
-
-    completedOrder.items.forEach(item => {
-      const qtyStr = item.quantity.toString().padEnd(5, ' ');
-      const itemName = item.menuItem?.name || 'Item';
-      doc.text(`${qtyStr} ${itemName.substring(0, 35)}`, marginLeft, y);
-      y += 4;
-      if (item.customizations && item.customizations.length > 0) {
-        doc.setFontSize(7);
-        const customText = `  + ${item.customizations.map(c => `${c.name} (Rs.${c.price})`).join(', ')}`;
-        const splitText = doc.splitTextToSize(customText, 70);
-        splitText.forEach(line => {
-          doc.text(line, marginLeft, y);
-          y += 3;
-        });
-        doc.setFontSize(8);
-      }
-    });
-
-    y += 2;
-    doc.text("- - - - - - - - CUT HERE - - - - - - - - -", marginLeft, y);
-    y += 8;
-
-    // --- MAIN RECEIPT SECTION ---
-    doc.text(doubleLine, marginLeft, y);
-    y += 4;
-    
-    // Header
-    doc.setFontSize(10);
-    doc.text("         BILLING SYSTEM POS", marginLeft, y);
-    doc.setFontSize(8);
-    y += 4;
-    
-    doc.text(doubleLine, marginLeft, y);
-    y += 4;
-
-    // Order Info
-    const padR = (str, len) => str.toString().padEnd(len, ' ');
-    const padL = (str, len) => str.toString().padStart(len, ' ');
-
-    const dateStr = new Date(completedOrder.createdAt).toLocaleString('en-IN', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-    }).replace(',', '');
-
-    doc.text(`Bill No   : ${completedOrder.invoiceNumber}`, marginLeft, y);
-    y += 4;
-    doc.text(`Order No  : ${orderNo}`, marginLeft, y);
-    y += 4;
-    doc.text(`Date      : ${dateStr}`, marginLeft, y);
-    y += 4;
-    const cName = completedOrder.customerDetails?.name || 'Walk-in Customer';
-    doc.text(`Customer  : ${cName}`, marginLeft, y);
-    y += 4;
-
-    doc.text(singleLine, marginLeft, y);
-    y += 4;
-
-    // Items Header
-    // "Item" (22 chars), "Qty" (5 chars), "Price" (7 chars), "Total" (8 chars) = 42 chars total
-    doc.text("Item                    Qty  Price   Total", marginLeft, y);
-    y += 4;
-    doc.text(singleLine, marginLeft, y);
-    y += 4;
-
-    // Items
-    completedOrder.items.forEach(item => {
-      let itemName = item.menuItem?.name || 'Item';
-      if (itemName.length > 21) {
-        itemName = itemName.substring(0, 20) + '.';
-      }
-      
-      const col1 = padR(itemName, 22);
-      const col2 = padL(item.quantity.toString(), 5);
-      const col3 = padL(item.priceAtTime.toFixed(2), 7);
-      const col4 = padL(item.subtotal.toFixed(2), 8);
-      
-      doc.text(`${col1}${col2}${col3}${col4}`, marginLeft, y);
-      y += 4;
-
-      if (item.customizations && item.customizations.length > 0) {
-        doc.setFontSize(7);
-        const customText = `  + ${item.customizations.map(c => `${c.name} (Rs.${c.price})`).join(', ')}`;
-        const splitText = doc.splitTextToSize(customText, 40); // wrap within 40 chars
-        splitText.forEach(line => {
-          doc.text(line, marginLeft, y);
-          y += 3;
-        });
-        doc.setFontSize(8);
-      }
-    });
-
-    doc.text(singleLine, marginLeft, y);
-    y += 4;
-
-    // Totals
-    const subtotalStr = completedOrder.subtotal.toFixed(2);
-    doc.text(`Subtotal:                        ${padL(subtotalStr, 8)}`, marginLeft, y);
-    y += 4;
-    
-    if (completedOrder.discountAmount > 0) {
-      const discountStr = completedOrder.discountAmount.toFixed(2);
-      doc.text(`Discount:                       -${padL(discountStr, 8)}`, marginLeft, y);
-      y += 4;
+    if (r.paymentMethod === 'cash') {
+      doc.text(`Received: ${Number(r.amountReceived).toFixed(2)} | Change: ${Number(r.changeToReturn).toFixed(2)}`, 5, y);
+      y += 5;
     }
 
-    const gstStr = completedOrder.taxAmount.toFixed(2);
-    doc.text(`GST (5%):                        ${padL(gstStr, 8)}`, marginLeft, y);
+    // Thank you message
+    doc.setFont('Helvetica', 'bold');
+    doc.text('THANK YOU FOR YOUR VISIT!', 40, y, { align: 'center' });
     y += 4;
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.text('Brewed with Love. Powered by CRFTD POS.', 40, y, { align: 'center' });
 
-    doc.text(doubleLine, marginLeft, y);
-    y += 4;
-
-    doc.setFont('courier', 'bold');
-    const totalStr = completedOrder.totalAmount.toFixed(2);
-    doc.text(`TOTAL (Rs.):                     ${padL(totalStr, 8)}`, marginLeft, y);
-    doc.setFont('courier', 'normal');
-    y += 4;
-
-    if (completedOrder.paymentMethod === 'Cash' && completedOrder.cashGiven) {
-      y += 2;
-      const cashStr = completedOrder.cashGiven.toFixed(2);
-      const changeStr = (completedOrder.changeDue || 0).toFixed(2);
-      doc.text(`Cash Given:                      ${padL(cashStr, 8)}`, marginLeft, y);
-      y += 4;
-      doc.text(`Change Due:                      ${padL(changeStr, 8)}`, marginLeft, y);
-      y += 4;
-    }
-
-    doc.text(doubleLine, marginLeft, y);
-    y += 6;
-
-    // Footer
-    doc.text("      Thank you! Please visit again.", marginLeft, y);
-    y += 4;
-    doc.text(doubleLine, marginLeft, y);
-
-    return doc;
+    doc.save(`Bill_${r.orderCode}.pdf`);
+    showToast('Bill PDF downloaded!', 'success');
   };
 
-  const downloadReceipt = () => {
-    try {
-      const doc = getReceiptDoc();
-      if (doc) {
-        doc.save(`${completedOrder.invoiceNumber}.pdf`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("PDF Error: " + err.message);
-    }
+  // 7. Share on WhatsApp clicked
+  const handleWhatsAppShare = () => {
+    if (!activeReceipt) return;
+    const r = activeReceipt;
+    const itemsSummary = r.items.map(i => `${i.menuItem ? i.menuItem.name : 'Coffee'} (x${i.quantity})`).join(', ');
+    const text = `*CRFTD COFFEE SHOP RECEIPT*\n\n*Order Code:* ${r.orderCode}\n*Date:* ${new Date(r.createdAt).toLocaleDateString()}\n*Items:* ${itemsSummary}\n*Grand Total:* ₹${Number(r.grandTotal).toFixed(2)}\n*Payment Mode:* ${r.paymentMethod.toUpperCase()}\n\nThank you for dining with us! Come back soon! ☕`;
+    
+    const phone = r.customer ? r.customer.phone : '';
+    const formattedPhone = phone.replace(/[^0-9]/g, '');
+    
+    // Open web.whatsapp link
+    window.open(`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const printReceipt = () => {
-    const doc = getReceiptDoc();
-    if (doc) {
-      doc.autoPrint();
-      window.open(doc.output('bloburl'), '_blank');
-    }
-  };
-
-  const sendOnlineReceipt = async () => {
-    const doc = getReceiptDoc();
-    if (!doc) return;
-
-    if (!completedOrder.customerDetails?.phone) {
-      alert("No customer phone number available to send receipt.");
-      return;
-    }
-
-    try {
-      const pdfBlob = doc.output('blob');
-      const file = new File([pdfBlob], `${completedOrder.invoiceNumber}.pdf`, { type: 'application/pdf' });
-
-      // Check if browser supports file sharing
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: `CRFTD Bill ${completedOrder.invoiceNumber}`,
-          text: `Thank you for dining with CRFTD! Please find your bill attached.\n\nAmount: Rs. ${completedOrder.totalAmount.toFixed(2)}`,
-          files: [file]
-        });
-      } else {
-        // Fallback if file sharing is not supported by the browser (like Chrome Desktop)
-        alert("Your browser does not support direct file sharing to WhatsApp. Generating a text link instead...");
-        
-        let message = `*CRFTD - E-Receipt*\n\n`;
-        message += `Bill No: ${completedOrder.invoiceNumber}\n`;
-        message += `Total Amount: ₹${completedOrder.totalAmount.toFixed(2)}\n\n`;
-        message += `*Items:*\n`;
-        completedOrder.items.forEach(item => {
-          message += `- ${item.quantity}x ${item.menuItem?.name} (₹${item.subtotal})\n`;
-        });
-        message += `\nThank you for choosing CRFTD!`;
-
-        const encodedMessage = encodeURIComponent(message);
-        const waUrl = `https://wa.me/91${completedOrder.customerDetails.phone}?text=${encodedMessage}`;
-        window.open(waUrl, '_blank');
-      }
-    } catch (err) {
-      console.error("Error sharing:", err);
-    }
-  };
+  // Filter menu items by selected category and search input
+  const filteredMenu = menuItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          item.itemCode.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCat = selectedCategory === 'all' ? true : item.category === selectedCategory;
+    return matchesSearch && matchesCat;
+  });
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: '2rem' }}>
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', margin: '0 0 0.25rem 0', color: 'var(--text-main)' }}>Point of Sale</h1>
-            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Select an item to view details or add it directly to cart</p>
+    <div style={{ display: 'flex', gap: '2rem', height: '90vh', overflow: 'hidden' }} className="mobile-stack">
+      
+      {/* LEFT PANEL: Menu Cards Group Grid */}
+      <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        {/* Search and Filters Header */}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+            <Search size={18} color="var(--text-subtle)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+            <input 
+              type="text" 
+              placeholder="Search coffee or snack code..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ paddingLeft: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-panel)' }}
+            />
           </div>
-          <div style={{ position: 'relative', width: '300px' }}>
-            <Search size={20} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input type="text" placeholder="Search Product here..." style={{ paddingLeft: '3rem', borderRadius: 'var(--radius-xl)', background: '#ffffff', boxShadow: 'var(--shadow-sm)' }} />
-          </div>
+
+          <select 
+            value={selectedCategory} 
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={{ width: '180px', height: '2.75rem', padding: '0 1rem', background: 'var(--bg-panel)', borderRadius: 'var(--radius-md)' }}
+          >
+            {categories.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
+          </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-          {displayCategories.map(cat => (
-            <button 
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              style={{ 
-                background: activeTab === cat ? 'rgba(16, 185, 129, 0.15)' : '#ffffff', 
-                color: activeTab === cat ? 'var(--primary)' : 'var(--text-main)', 
-                border: '1px solid',
-                borderColor: activeTab === cat ? 'var(--primary)' : 'var(--border)', 
-                padding: '1rem 1.5rem', 
-                borderRadius: 'var(--radius-lg)', 
-                cursor: 'pointer', 
-                fontWeight: 600, 
-                fontSize: '1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.5rem',
-                minWidth: '120px',
-                boxShadow: 'var(--shadow-sm)'
+        {/* Categories Tab Pill Bar */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.5rem', 
+          overflowX: 'auto', 
+          paddingBottom: '0.85rem',
+          marginBottom: '1rem',
+          flexShrink: 0
+        }} className="custom-scroll">
+          {categories.map(cat => (
+            <button
+              key={cat.value}
+              onClick={() => setSelectedCategory(cat.value)}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '30px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '0.85rem',
+                whiteSpace: 'nowrap',
+                transition: 'var(--transition)',
+                backgroundColor: selectedCategory === cat.value ? 'var(--primary)' : 'var(--bg-panel)',
+                color: selectedCategory === cat.value ? 'white' : 'var(--text-muted)'
               }}
             >
-              {getCategoryIcon(cat)}
-              {cat}
+              {cat.label}
             </button>
           ))}
         </div>
-        
-        <div className="pos-grid">
-          {menuItems.filter(item => {
-            if (activeTab === 'All Items') return !item.isCustomization;
-            return !item.isCustomization && item.category === activeTab;
-          }).length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>No items found in this category.</p>
-          ) : menuItems.filter(item => {
-            if (activeTab === 'All Items') return !item.isCustomization;
-            return !item.isCustomization && item.category === activeTab;
-          }).map(item => (
-            <div 
-              key={item._id} 
-              className="pos-item-card animate-slide-up" 
-              style={{ 
-                opacity: item.isAvailable === false ? 0.6 : 1, 
-                filter: item.isAvailable === false ? 'grayscale(0.8)' : 'none',
-                pointerEvents: item.isAvailable === false ? 'none' : 'auto',
-                cursor: item.isAvailable === false ? 'not-allowed' : 'default'
-              }}
-            >
-              {item.image ? (
-                <img src={item.image} alt={item.name} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }} />
-              ) : (
-                <div style={{ width: '100%', height: '140px', borderRadius: 'var(--radius-md)', background: 'var(--bg-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}><ChefHat size={40} color="var(--text-muted)" /></div>
-              )}
-              
-              <span className="pos-item-category">
-                {item.isCustomization ? `Component: ${item.customizationType}` : item.category || 'Dish'}
-              </span>
 
-              <div className="pos-item-name">
-                {item.name} 
-                {item.isAvailable === false && <span style={{display: 'block', color: 'var(--error)', fontSize: '0.8rem', marginTop: '0.2rem'}}>Sold Out</span>}
-              </div>
-              
-              <p className="pos-item-price">₹{item.price}</p>
-              
-              {item.isAvailable !== false && (
-                <div className="pos-item-actions" style={{ flexDirection: 'column', gap: '0.5rem' }}>
-                    <button 
-                      onClick={(e) => addToCart(item, e)} 
-                      className="btn" 
-                      style={{ width: '100%', padding: '0.75rem 0', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--primary)', border: 'none', fontWeight: 700 }}
-                    >
-                      Add to Dish
-                    </button>
-                      <button 
-                        onClick={() => setSelectedProduct(item)} 
-                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
-                      >
-                        View Details
-                      </button>
-                </div>
-              )}
+        {/* Menu Grid scroll frame */}
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="custom-scroll">
+          {loadingMenu ? (
+            <div className="pos-grid">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="glass skeleton" style={{ height: '200px', borderRadius: 'var(--radius-lg)' }} />
+              ))}
             </div>
-          ))}
+          ) : filteredMenu.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', color: 'var(--text-muted)' }}>
+              <Coffee size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+              <p>No coffee or bites found in this category.</p>
+            </div>
+          ) : (
+            <div className="pos-grid">
+              {filteredMenu.map(item => (
+                <div 
+                  key={item._id} 
+                  className="pos-item-card"
+                  onClick={() => addToCart(item)}
+                  style={{
+                    opacity: item.isAvailable ? 1 : 0.6,
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Availability Badge Overlay */}
+                  {!item.isAvailable && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      backgroundColor: 'var(--error)',
+                      color: 'white',
+                      fontSize: '0.65rem',
+                      fontWeight: '800',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '10px',
+                      zIndex: 2
+                    }}>
+                      Out of stock
+                    </div>
+                  )}
+
+                  {/* Product Image */}
+                  <div style={{
+                    width: '100%',
+                    height: '110px',
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'hidden',
+                    backgroundColor: 'var(--border-light)',
+                    position: 'relative'
+                  }}>
+                    {item.imageUrl ? (
+                      <img 
+                        src={item.imageUrl} 
+                        alt={item.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-subtle)' }}>
+                        <Coffee size={36} />
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="pos-item-name">{item.name}</span>
+                  <span className="pos-item-category">{item.category.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+                  <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Cart Overlay for Mobile */}
-      <div 
-        className={`cart-overlay ${isMobileCartOpen ? 'open' : ''}`} 
-        onClick={() => setIsMobileCartOpen(false)}
-      ></div>
-
-      {/* Cart Sidebar */}
-      <div className={`cart-sidebar glass ${isMobileCartOpen ? 'mobile-open' : ''}`} style={{ borderRadius: 'var(--radius-lg)' }}>
-        <div className="cart-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>Current Order</h2>
-          {/* Close button for mobile */}
-          <button 
-            className="btn btn-secondary d-md-none" 
-            style={{ padding: '0.5rem', background: 'transparent', border: 'none' }}
-            onClick={() => setIsMobileCartOpen(false)}
-          >
-            <X size={24} color="var(--text-main)" />
-          </button>
-        </div>
+      {/* RIGHT PANEL: CART SIDEBAR */}
+      <div className="cart-sidebar" style={{ height: '90vh', borderRadius: 'var(--radius-xl)' }}>
         
-        <div className="cart-items">
+        {/* Cart Header */}
+        <div className="cart-header" style={{ flexShrink: 0 }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShoppingCart size={20} color="var(--primary)" /> Cart Register
+          </h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {cart.length} distinct item(s) selected
+          </span>
+        </div>
+
+        {/* Cart Items List */}
+        <div className="cart-items custom-scroll" style={{ flex: 1, overflowY: 'auto' }}>
           {cart.length === 0 ? (
-            <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>Cart is empty</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-subtle)', textAlign: 'center' }}>
+              <Coffee size={40} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
+              <p style={{ fontSize: '0.9rem' }}>Cart is empty.<br />Click coffee cards to add.</p>
+            </div>
           ) : (
             cart.map(item => (
-              <div key={item.cartItemId} className="cart-item">
+              <div key={item._id} className="cart-item">
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0 }}>{item.name}</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0.25rem 0 0' }}>₹{item.price}</p>
-                  {item.customizations && item.customizations.length > 0 && (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                      + {item.customizations.map(c => c.name).join(', ')}
-                    </div>
-                  )}
+                  <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', display: 'block' }}>{item.name}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>₹{Number(item.price).toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <button onClick={() => updateQty(item.cartItemId, -1)} style={{ background: 'var(--bg-dark)', border: '1px solid var(--border)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
-                  <span style={{ fontWeight: 600 }}>{item.qty}</span>
-                  <button onClick={() => updateQty(item.cartItemId, 1)} style={{ background: 'rgba(16, 185, 129, 0.15)', border: 'none', color: 'var(--primary)', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>+</button>
+                
+                {/* Quantity adjustments +/- */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0 1rem' }}>
+                  <button 
+                    onClick={() => updateQuantity(item._id, -1)}
+                    style={{ width: '22px', height: '22px', borderRadius: '4px', border: 'none', background: 'var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Minus size={12} />
+                  </button>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800' }}>{item.quantity}</span>
+                  <button 
+                    onClick={() => updateQuantity(item._id, 1)}
+                    style={{ width: '22px', height: '22px', borderRadius: '4px', border: 'none', background: 'var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Plus size={12} />
+                  </button>
                 </div>
-                <div style={{ marginLeft: '1rem', fontWeight: 600, width: '60px', textAlign: 'right' }}>
-                  ₹{(item.price * item.qty).toFixed(0)}
-                </div>
+
+                {/* Remove Trash icon */}
+                <button 
+                  onClick={() => removeFromCart(item._id)}
+                  style={{ background: 'transparent', border: 'none', color: '#d9534f', cursor: 'pointer' }}
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             ))
           )}
         </div>
 
-        {cart.length > 0 && (
-          <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'rgba(16, 185, 129, 0.05)' }}>
-            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--primary)' }}>Pairs well with your order!</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {menuItems
-                .filter(i => !i.isCustomization && i.isAvailable !== false && !cart.some(c => c._id === i._id))
-                .slice(0, 2)
-                .map(rec => (
-                  <div key={rec._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', padding: '0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {rec.image ? (
-                        <img src={rec.image} alt={rec.name} style={{ width: '30px', height: '30px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
-                      ) : (
-                        <div style={{ width: '30px', height: '30px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Utensils size={16} color="var(--text-muted)" /></div>
-                      )}
-                      <div>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{rec.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>₹{rec.price}</div>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={(e) => addToCart(rec, e)} 
-                      style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 'bold' }}
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        <div className="cart-footer">
-          <div className="summary-row">
-            <span>Subtotal</span>
-            <span>₹{subtotal.toFixed(2)}</span>
-          </div>
+        {/* Cart Billing Footer Renders calculations */}
+        <div className="cart-footer" style={{ borderTop: '2px solid var(--border)', background: 'var(--bg-panel)', padding: '1rem' }}>
           
-          <div className="summary-row" style={{ alignItems: 'center' }}>
-            <span>Discount (%)</span>
-            <input 
-              type="number" 
-              min="0" max="100" 
-              value={discountPercent} 
-              onChange={(e) => setDiscountPercent(e.target.value)}
-              placeholder="0"
-              style={{ width: '80px', padding: '0.4rem 0.6rem' }}
-            />
-          </div>
+          <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            
+            {/* Customer Lookup phone */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <div style={{ position: 'relative' }}>
+                <Phone size={14} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input 
+                  type="text" 
+                  maxLength={10}
+                  placeholder="Phone number" 
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                  style={{ padding: '0.4rem 0.5rem 0.4rem 1.75rem', height: '2rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                />
+              </div>
+              
+              <div style={{ position: 'relative' }}>
+                <User size={14} color="var(--text-subtle)" style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Guest name" 
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  disabled={!isNewCustomer && customerPhone.length === 10}
+                  style={{ padding: '0.4rem 0.5rem 0.4rem 1.75rem', height: '2rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                />
+              </div>
+            </div>
 
-          <div className="summary-row">
-            <span>GST (5%)</span>
-            <span>₹{gst.toFixed(2)}</span>
-          </div>
+            {/* Order types and table number */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                {['dine_in', 'takeaway'].map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setOrderType(type)}
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      height: '1.8rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      background: orderType === type ? 'var(--primary)' : 'transparent',
+                      color: orderType === type ? 'white' : 'var(--text-muted)'
+                    }}
+                  >
+                    {type === 'dine_in' ? 'Dine In' : 'Takeaway'}
+                  </button>
+                ))}
+              </div>
 
-          <div className="summary-row total">
-            <span>Total Payable</span>
-            <span style={{ color: 'var(--accent)' }}>₹{total.toFixed(2)}</span>
-          </div>
+              {orderType === 'dine_in' ? (
+                <input 
+                  type="number" 
+                  min="1"
+                  required
+                  placeholder="Table #" 
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  style={{ padding: '0.2rem 0.5rem', height: '1.8rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                />
+              ) : (
+                <div style={{ height: '1.8rem' }} />
+              )}
+            </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {['Cash', 'Card', 'UPI'].map(method => (
-              <button 
-                key={method}
-                onClick={() => setPaymentMethod(method)}
-                style={{ 
-                  flex: 1, 
-                  padding: '0.75rem 0.5rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid',
-                  borderColor: paymentMethod === method ? 'var(--primary)' : 'var(--border)',
-                  background: paymentMethod === method ? 'rgba(16, 185, 129, 0.1)' : '#ffffff',
-                  color: paymentMethod === method ? 'var(--primary)' : 'var(--text-main)',
-                  fontWeight: 600,
-                  transition: 'var(--transition)'
-                }}
+            {/* Discount and Payment Method selector */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Percent size={14} color="var(--text-subtle)" />
+                <select 
+                  value={discountPercent} 
+                  onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                  style={{ height: '2rem', padding: '0 0.5rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                >
+                  {discountOptions.map(opt => (
+                    <option key={opt} value={opt}>{opt}% Disc</option>
+                  ))}
+                </select>
+              </div>
+
+              <select 
+                value={paymentMethod} 
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{ height: '2rem', padding: '0 0.5rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
               >
-                {method}
-              </button>
-            ))}
-          </div>
+                <option value="cash">💵 Cash Pay</option>
+                <option value="upi">📱 UPI Pay</option>
+                <option value="card">💳 Card Pay</option>
+              </select>
+            </div>
 
-          <button 
-            className="btn btn-primary" 
-            style={{ width: '100%', padding: '1rem', fontSize: '1rem' }}
-            onClick={handleCheckoutInit}
-            disabled={cart.length === 0}
-          >
-            Proceed to Checkout
-          </button>
+            {/* Cash Received and change return controls */}
+            {paymentMethod === 'cash' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', alignItems: 'center' }}>
+                <input 
+                  type="number" 
+                  min={totals.grandTotal}
+                  placeholder="Tender Cash" 
+                  value={amountReceived}
+                  onChange={(e) => setAmountReceived(e.target.value)}
+                  style={{ padding: '0.2rem 0.5rem', height: '2rem', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)' }}
+                />
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>
+                  Change: <span style={{ color: 'var(--primary)' }}>₹{totals.changeToReturn.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Order Totals Summary */}
+            <div style={{ margin: '0.25rem 0' }}>
+              <div className="summary-row">
+                <span>Subtotal</span>
+                <span>₹{totals.subtotal.toFixed(2)}</span>
+              </div>
+              {totals.discountAmount > 0 && (
+                <div className="summary-row" style={{ color: '#d9534f' }}>
+                  <span>Discount</span>
+                  <span>-₹{totals.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="summary-row">
+                <span>GST (5%)</span>
+                <span>₹{totals.totalGst.toFixed(2)}</span>
+              </div>
+              <div className="summary-row total">
+                <span>GRAND TOTAL</span>
+                <span>₹{totals.grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Submit checkout buttons */}
+            <button 
+              type="submit" 
+              className="btn btn-primary" 
+              style={{ width: '100%', height: '2.6rem', borderRadius: 'var(--radius-md)', fontSize: '0.9rem', justifyContent: 'center' }}
+              disabled={checkoutLoading || cart.length === 0}
+            >
+              {checkoutLoading ? 'Processing...' : 'Place POS Order'}
+            </button>
+          </form>
+
         </div>
       </div>
 
-      {/* Custom Dish Builder Wizard */}
-      {showBuilder && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-          <div className="glass animate-slide-up" style={{ width: '90%', maxWidth: '800px', height: '80vh', borderRadius: 'var(--radius-lg)', background: '#ffffff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            
-            {/* Header */}
-            <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-dark)' }}>
-              <div>
-                <h2 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <ChefHat color="var(--primary)" /> Build Your Own Dish
-                </h2>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.9rem' }}>
-                  {['Base', 'Flavour', 'Topping', 'Filling', 'Syrup'].map((stepName, idx) => (
-                    <span key={stepName} style={{ 
-                      color: builderStep === idx ? 'var(--primary)' : builderStep > idx ? 'var(--text-main)' : 'var(--text-subtle)',
-                      fontWeight: builderStep === idx ? 700 : 500,
-                      display: 'flex', alignItems: 'center', gap: '0.25rem'
-                    }}>
-                      {stepName}
-                      {idx < 4 && <ChevronRight size={14} color="var(--text-subtle)" />}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <button onClick={() => setShowBuilder(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.5rem' }}><X size={24} color="var(--text-muted)" /></button>
+      {/* TICKET RECEIPT MODAL SHEET (MODULE 5) */}
+      {showReceiptModal && activeReceipt && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass" style={{
+            width: '380px',
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex', flexDirection: 'column', gap: '1.5rem'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <CheckCircle size={44} color="var(--primary)" style={{ margin: '0 auto 0.5rem' }} />
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>Transaction Logged</h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Order ID: {activeReceipt.orderCode}</p>
             </div>
 
-            {/* Content Area */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', background: 'var(--bg-dark)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1.5rem' }}>
-                {(() => {
-                  let options = [];
-                  if (builderStep === 0) options = menuItems.filter(i => !i.isCustomization && (i.category === 'Waffles' || i.category === 'Pancakes'));
-                  if (builderStep === 1) options = menuItems.filter(i => i.isCustomization && i.customizationType === 'Flavour');
-                  if (builderStep === 2) options = menuItems.filter(i => i.isCustomization && i.customizationType === 'Topping');
-                  if (builderStep === 3) options = menuItems.filter(i => i.isCustomization && i.customizationType === 'Filling');
-                  if (builderStep === 4) options = menuItems.filter(i => i.isCustomization && i.customizationType === 'Syrup');
-
-                  if (options.length === 0) return <p style={{ color: 'var(--text-muted)', gridColumn: '1 / -1' }}>No options available for this step. Click Next to skip.</p>;
-
-                  return options.map(item => {
-                    const isBaseSelected = builderStep === 0 && builderBase?._id === item._id;
-                    const isCustomSelected = builderStep > 0 && builderCustomizations.some(c => c._id === item._id);
-                    const isSelected = isBaseSelected || isCustomSelected;
-
-                    return (
-                      <div 
-                        key={item._id}
-                        onClick={() => {
-                          if (item.isAvailable === false) return;
-                          if (builderStep === 0) {
-                            setBuilderBase(item);
-                            setBuilderStep(1);
-                          } else {
-                            if (isCustomSelected) {
-                              setBuilderCustomizations(prev => prev.filter(c => c._id !== item._id));
-                            } else {
-                              setBuilderCustomizations(prev => [...prev, item]);
-                            }
-                          }
-                        }}
-                        style={{
-                          background: isSelected ? 'rgba(16, 185, 129, 0.1)' : '#ffffff',
-                          border: '2px solid',
-                          borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
-                          borderRadius: 'var(--radius-md)',
-                          padding: '1rem',
-                          cursor: item.isAvailable === false ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          transition: 'var(--transition)',
-                          boxShadow: 'var(--shadow-sm)',
-                          position: 'relative',
-                          opacity: item.isAvailable === false ? 0.6 : 1,
-                          filter: item.isAvailable === false ? 'grayscale(0.8)' : 'none'
-                        }}
-                      >
-                        {isSelected && <div style={{ position: 'absolute', top: '-10px', right: '-10px', background: 'var(--primary)', color: 'white', borderRadius: '50%', padding: '0.2rem' }}><CheckCircle size={18} /></div>}
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%', marginBottom: '1rem' }} />
-                        ) : (
-                          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--bg-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}><Utensils size={32} color="var(--text-muted)" /></div>
-                        )}
-                        <span style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{item.name}</span>
-                        {item.isAvailable === false ? (
-                           <span style={{ color: 'var(--error)', fontWeight: 'bold', fontSize: '0.8rem' }}>Sold Out</span>
-                        ) : (
-                           <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>+₹{item.price}</span>
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
+            {/* Small scrollable bill sheet mock */}
+            <div style={{ 
+              background: 'var(--border-light)', 
+              borderRadius: 'var(--radius-md)', 
+              padding: '1.25rem', 
+              fontSize: '0.8rem',
+              border: '1px dashed var(--border)',
+              maxHeight: '260px',
+              overflowY: 'auto'
+            }} className="custom-scroll">
+              <div style={{ textAlign: 'center', fontWeight: '800', marginBottom: '0.5rem' }}>CRFTD COFFEE SHOP</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.75rem' }}>
+                <span>Code: {activeReceipt.orderCode}</span>
+                <span>{new Date(activeReceipt.createdAt).toLocaleDateString()}</span>
               </div>
-            </div>
-
-            {/* Footer & Actions */}
-            <div style={{ padding: '1.5rem 2rem', background: '#ffffff', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Running Total</span>
-                <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent)' }}>
-                  ₹{((builderBase?.price || 0) + builderCustomizations.reduce((sum, c) => sum + c.price, 0)).toFixed(2)}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => setBuilderStep(prev => Math.max(0, prev - 1))}
-                  disabled={builderStep === 0}
-                >
-                  <ChevronLeft size={20} /> Back
-                </button>
-                
-                {builderStep > 0 && builderStep < 4 && (
-                  <button 
-                    className="btn btn-secondary" 
-                    onClick={() => setBuilderStep(prev => prev + 1)}
-                    style={{ background: 'transparent', color: 'var(--text-muted)' }}
-                  >
-                    Skip
-                  </button>
-                )}
-                
-                {builderStep < 4 ? (
-                  <button 
-                    className="btn btn-primary" 
-                    onClick={() => setBuilderStep(prev => prev + 1)}
-                    disabled={builderStep === 0 && !builderBase}
-                  >
-                    Next Step <ChevronRight size={20} />
-                  </button>
-                ) : (
-                  <button 
-                    className="btn btn-primary" 
-                    onClick={() => {
-                      if (!builderBase) return alert("Please select a base dish first!");
-                      const customIds = builderCustomizations.map(c => c._id).sort().join(',');
-                      const cartItemId = builderBase._id + customIds;
-                      
-                      const formattedCustomizations = builderCustomizations.map(c => ({
-                        menuItemId: c._id,
-                        name: c.name,
-                        price: c.price
-                      }));
-
-                      setCart(prev => {
-                        const existing = prev.find(i => i.cartItemId === cartItemId);
-                        if (existing) {
-                          return prev.map(i => i.cartItemId === cartItemId ? { ...i, qty: i.qty + 1 } : i);
-                        }
-                        return [...prev, { ...builderBase, cartItemId, qty: 1, customizations: formattedCustomizations }];
-                      });
-
-                      setShowBuilder(false);
-                      setBuilderStep(0);
-                      setBuilderBase(null);
-                      setBuilderCustomizations([]);
-                    }}
-                    style={{ background: '#f59e0b', color: 'black' }}
-                  >
-                    <Plus size={20} /> Add to Cart
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Details Modal */}
-      {selectedProduct && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass animate-slide-up" style={{ width: '500px', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#ffffff' }}>
-            <div style={{ position: 'relative', height: '250px', background: 'var(--bg-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {selectedProduct.image ? (
-                <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <ChefHat size={80} color="var(--text-muted)" />
-              )}
-              <button onClick={() => setSelectedProduct(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(0,0,0,0.5)', border: 'none', color: 'var(--text-main)', cursor: 'pointer', borderRadius: '50%', padding: '0.5rem' }}><X size={20} /></button>
-            </div>
-            
-            <div style={{ padding: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.8rem', margin: '0 0 0.5rem 0' }}>{selectedProduct.name}</h2>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--primary)', background: 'rgba(16, 185, 129, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontWeight: 600 }}>{selectedProduct.category || selectedProduct.customizationType}</span>
-                </div>
-                <span style={{ color: 'var(--accent)', fontSize: '1.5rem', fontWeight: 'bold' }}>
-                  ₹{selectedProduct.price.toFixed(2)}
-                </span>
-              </div>
+              <hr style={{ border: 'none', borderTop: '1px dashed var(--border)', margin: '0.5rem 0' }} />
               
-              <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                {selectedProduct.description || "A deliciously crafted dish prepared fresh in our kitchen."}
-              </p>
-
-              {/* Nutrition Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ background: '#ffffff', padding: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Calories</div>
-                  <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedProduct.nutritionalInfo?.calories || '-'}</div>
+              {activeReceipt.items.map((i, index) => (
+                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', margin: '0.25rem 0' }}>
+                  <span>{i.menuItem ? i.menuItem.name : 'Coffee'} x{i.quantity}</span>
+                  <span>₹{Number(i.subtotal).toFixed(2)}</span>
                 </div>
-                <div style={{ background: '#ffffff', padding: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Protein</div>
-                  <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedProduct.nutritionalInfo?.protein || '-'}g</div>
-                </div>
-                <div style={{ background: '#ffffff', padding: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Carbs</div>
-                  <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedProduct.nutritionalInfo?.carbs || '-'}g</div>
-                </div>
-                <div style={{ background: '#ffffff', padding: '1rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Fat</div>
-                  <div style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedProduct.nutritionalInfo?.fat || '-'}g</div>
-                </div>
-              </div>
-
-
-
-              <button className="btn btn-primary" style={{ width: '100%', padding: '1.25rem', fontSize: '1.1rem' }} onClick={(e) => addToCart(selectedProduct, e)}>
-                <Plus size={20} /> Add to Cart
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Checkout Step 1 Modal: Customer CRM */}
-      {showCustomerModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass animate-slide-up" style={{ width: '450px', borderRadius: 'var(--radius-lg)', padding: '2.5rem', background: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Customer Details</h2>
-              <button onClick={() => setShowCustomerModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
-            </div>
-            
-            <form onSubmit={handlePaymentInit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Phone Number (10 digits)</label>
-                <div style={{ position: 'relative' }}>
-                  <input 
-                    required 
-                    type="tel" 
-                    value={customerPhone} 
-                    onChange={e => {
-                      setCustomerPhone(e.target.value);
-                      checkCustomerPhone(e.target.value);
-                    }} 
-                    placeholder="e.g. 9876543210" 
-                  />
-                  {customerLoading && <Search size={16} color="var(--primary)" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }} />}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Customer Name</label>
-                <input 
-                  required 
-                  type="text" 
-                  value={customerName} 
-                  onChange={e => setCustomerName(e.target.value)} 
-                  placeholder="John Doe" 
-                />
-                {customerName && !customerLoading && customerPhone.length >= 10 && (
-                  <p style={{ color: 'var(--accent)', fontSize: '0.8rem', marginTop: '0.5rem', margin: '0.5rem 0 0 0' }}>
-                    Customer profile identified. Loyalty Points: {customerLoyaltyPoints}
-                  </p>
-                )}
-                {loyaltySettings && customerLoyaltyPoints >= loyaltySettings.thresholdPoints && (
-                  <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--primary)', marginTop: '1rem' }}>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Gift size={18} /> Reward Available!</h4>
-                    <p style={{ fontSize: '0.9rem', margin: '0 0 1rem 0', color: 'var(--text-main)' }}>
-                      {loyaltySettings.rewardType === 'discount' 
-                        ? `Eligible for ${loyaltySettings.rewardValue}% discount.` 
-                        : `Eligible for free: ${loyaltySettings.rewardValue}.`}
-                    </p>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, color: 'var(--text-main)' }}>
-                      <input type="checkbox" checked={rewardApplied} onChange={e => setRewardApplied(e.target.checked)} />
-                      Apply Reward (deducts {loyaltySettings.thresholdPoints} pts)
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {paymentMethod === 'Cash' && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Cash Given by Customer</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>₹</span>
-                    <input 
-                      required 
-                      type="number" 
-                      min={total}
-                      step="0.01"
-                      value={cashGiven} 
-                      onChange={e => setCashGiven(e.target.value)} 
-                      placeholder="Enter amount..."
-                      style={{ paddingLeft: '2rem' }}
-                    />
-                  </div>
-                  {Number(cashGiven) > 0 && Number(cashGiven) >= total && (
-                    <p style={{ color: '#10b981', fontSize: '0.9rem', marginTop: '0.5rem' }}>Change Due: ₹{(Number(cashGiven) - total).toFixed(2)}</p>
-                  )}
-                </div>
-              )}
-
-              {paymentMethod === 'Card' && cardAwaiting && (
-                <div style={{ background: '#ffffff', padding: '1.5rem', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
-                  <CreditCard size={32} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-                  <h3 style={{ margin: '0 0 0.5rem 0' }}>Awaiting Card Swipe</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Please complete the transaction of ₹{total.toFixed(2)} on the card terminal.</p>
-                </div>
-              )}
-
-              {paymentMethod === 'UPI' && (
-                <div style={{ background: '#ffffff', padding: '1.5rem', borderRadius: 'var(--radius-md)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <Smartphone size={32} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-                  <h3 style={{ margin: '0 0 0.5rem 0' }}>Online UPI Checkout</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>You will be redirected to the secure Stripe payment gateway to complete the UPI transaction of ₹{total.toFixed(2)}.</p>
-                </div>
-              )}
-
-              <div style={{ marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-                 <p style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Total Amount</span>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--accent)' }}>₹{total.toFixed(2)}</span>
-                 </p>
-                 <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1.2rem', fontSize: '1.1rem' }} disabled={isProcessing}>
-                    {isProcessing ? 'Processing...' : (
-                      paymentMethod === 'Card' && !cardAwaiting ? 'Initiate Card Payment' :
-                      paymentMethod === 'Card' && cardAwaiting ? 'Confirm Terminal Success' :
-                      paymentMethod === 'UPI' ? 'Proceed to Stripe Payment' :
-                      'Complete Payment'
-                    )}
-                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Checkout Step 2 Modal: Success & Bill Options */}
-      {showSuccessModal && completedOrder && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass animate-slide-up" style={{ width: '500px', borderRadius: 'var(--radius-lg)', padding: '3rem', textAlign: 'center', background: '#ffffff' }}>
-            <CheckCircle size={64} color="var(--accent)" style={{ margin: '0 auto 1.5rem auto' }} />
-            <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Order Successful!</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem' }}>Invoice: {completedOrder.invoiceNumber} • Paid via {completedOrder.paymentMethod}</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <button className="btn btn-primary" onClick={downloadReceipt} style={{ padding: '1.2rem' }}>
-                <Download size={20} /> Download PDF
-              </button>
-              <button className="btn btn-primary" onClick={printReceipt} style={{ padding: '1.2rem', background: '#3b82f6', border: 'none' }}>
-                <Printer size={20} /> Print Thermal Bill
-              </button>
-              <button className="btn btn-secondary" onClick={sendOnlineReceipt} style={{ padding: '1.2rem', borderColor: '#25D366', color: '#25D366' }}>
-                <MessageSquare size={20} /> Send via WhatsApp
-              </button>
+              ))}
               
+              <hr style={{ border: 'none', borderTop: '1px dashed var(--border)', margin: '0.5rem 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                <span>Subtotal</span>
+                <span>₹{Number(activeReceipt.subtotal).toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                <span>GST (5%)</span>
+                <span>₹{Number(activeReceipt.gstAmount).toFixed(2)}</span>
+              </div>
+              {Number(activeReceipt.discountAmount) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#d9534f' }}>
+                  <span>Discount</span>
+                  <span>-₹{Number(activeReceipt.discountAmount).toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', marginTop: '0.25rem', fontSize: '0.85rem' }}>
+                <span>GRAND TOTAL</span>
+                <span>₹{Number(activeReceipt.grandTotal).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Bill Actions buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <button 
-                onClick={() => { setShowSuccessModal(false); setCompletedOrder(null); }} 
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', marginTop: '1rem', textDecoration: 'underline' }}
+                onClick={generatePDF}
+                className="btn btn-primary"
+                style={{ width: '100%', height: '2.5rem', fontSize: '0.85rem' }}
               >
-                Close & Start New Order
+                <Download size={16} /> Download Bill PDF
+              </button>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <button 
+                  onClick={() => { window.print(); }}
+                  className="btn btn-secondary"
+                  style={{ height: '2.5rem', fontSize: '0.85rem' }}
+                >
+                  <Printer size={16} /> Print Bill
+                </button>
+                <button 
+                  onClick={handleWhatsAppShare}
+                  className="btn btn-secondary"
+                  style={{ height: '2.5rem', fontSize: '0.85rem', color: '#25D366' }}
+                >
+                  <Share2 size={16} /> WhatsApp
+                </button>
+              </div>
+
+              <button 
+                onClick={() => setShowReceiptModal(false)}
+                className="btn btn-secondary"
+                style={{ width: '100%', height: '2.5rem', marginTop: '0.5rem', fontSize: '0.85rem', fontWeight: '700' }}
+              >
+                Close Ticket
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Mobile Cart Overlay */}
-      {isMobileCartOpen && (
-        <div 
-          className="mobile-cart-overlay" 
-          onClick={() => setIsMobileCartOpen(false)}
-        />
-      )}
-
-      {/* Mobile Floating Action Button */}
-      <button 
-        className="mobile-fab" 
-        onClick={() => setIsMobileCartOpen(true)}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <ShoppingCart size={20} />
-          <span>{cart.length} Items</span>
-        </div>
-        <span>₹{total.toFixed(2)}</span>
-      </button>
 
     </div>
   );
 };
-
-const POS = () => (
-  <ErrorBoundary>
-    <POSInner />
-  </ErrorBoundary>
-);
 
 export default POS;

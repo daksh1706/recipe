@@ -1,21 +1,21 @@
 :root {
-  /* Colors - Light Theme based on modern POS image */
-  --bg-dark: #f0f4f8; /* Base app background */
-  --bg-panel: #ffffff;
-  --bg-card: #ffffff;
+  /* Colors - Light Coffee Theme */
+  --bg-dark: #FAF7F2;      /* Sweet Milk / Froth white base */
+  --bg-panel: #FFFFFF;
+  --bg-card: #FFFFFF;
   
-  --primary: #10b981; /* Emerald Green */
-  --secondary: #059669; /* Darker Emerald */
-  --accent: #10b981;
-  --error: #ef4444;
-  --info: #3b82f6;
+  --primary: #8C6239;      /* Warm Roasted Coffee Brown */
+  --secondary: #6F4E37;    /* Deep Espresso Brown */
+  --accent: #D4A373;       /* Warm Latte Gold Cream */
+  --error: #d9534f;
+  --info: #5bc0de;
 
-  --text-main: #1f2937;
-  --text-muted: #6b7280;
-  --text-subtle: #9ca3af;
+  --text-main: #2D231E;    /* Dark Cocoa text */
+  --text-muted: #7A6F68;   /* Cocoa powder */
+  --text-subtle: #AFA59E;  /* Light froth brown */
   
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
+  --border: #E8E2DA;       /* Cream edge border */
+  --border-light: #F6F3EE;
   
   /* Layout & Radii */
   --radius-sm: 8px;
@@ -25,13 +25,47 @@
   
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 15px rgba(16, 185, 129, 0.2);
-  --shadow-glass: var(--shadow-md); /* Removing actual glassmorphism */
+  --shadow-md: 0 4px 6px -1px rgba(60, 40, 20, 0.08), 0 2px 4px -1px rgba(60, 40, 20, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(60, 40, 20, 0.1), 0 4px 6px -2px rgba(60, 40, 20, 0.05);
+  --shadow-glow: 0 0 15px rgba(140, 98, 57, 0.2);
+  --shadow-glass: var(--shadow-md);
   
   /* Animations */
   --transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Colors - Roasted Dark Coffee Theme */
+body.dark-theme {
+  --bg-dark: #1E140F;      /* Super dark roasted coffee */
+  --bg-panel: #3B2A20;     /* Rich medium roast coffee base */
+  --bg-card: #4A3529;      /* Lighter medium roast for cards */
+  
+  --primary: #D4A373;      /* Warm beige/gold coffee cream accent */
+  --secondary: #E9D8A6;    /* Soft latte cream */
+  --accent: #E07A5F;       /* Warm orange/terracotta */
+  --error: #E63946;
+  --info: #A8DADC;
+
+  --text-main: #F4EAE1;    /* Sweet cream white text */
+  --text-muted: #D3C2B5;   /* Light coffee froth */
+  --text-subtle: #9E897A;  /* Cocoa powder */
+  
+  --border: #563E30;       /* Roasted coffee bean edge */
+  --border-light: #4A3529;
+  
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
+/* Loading Skeletons utility */
+.skeleton {
+  background: linear-gradient(90deg, var(--border-light) 25%, var(--border) 50%, var(--border-light) 75%);
+  background-size: 200% 100%;
+  animation: loading-skeleton 1.5s infinite;
+}
+@keyframes loading-skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes slideInUp {

@@ -1,351 +1,437 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Search, ChevronRight, X, UserCircle, Gift, Settings, Clock, Receipt } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { ToastContext } from '../App';
+import { 
+  Users, Search, Plus, Edit, Trash2, Calendar, Phone, Mail, Award, X, ShoppingBag, MessageSquare, Download
+} from 'lucide-react';
 
 const Customers = () => {
+  const { showToast } = useContext(ToastContext);
+  const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
+
+  // State
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [search, setSearch] = useState('');
   
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [customerOrders, setCustomerOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-  
-  const [menuItems, setMenuItems] = useState([]);
+  const [activeProfile, setActiveProfile] = useState(null); // Detailed review panel
+  const [showModal, setShowModal] = useState(false);
+  const [editId, setEditId] = useState(null);
 
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [loyaltySettings, setLoyaltySettings] = useState({
-    pointsPerOrder: 1,
-    thresholdPoints: 10,
-    rewardType: 'discount', // 'discount' or 'freeItem'
-    rewardValue: '10',      // discount % OR free dish name (for display)
-    rewardItemId: ''        // free dish UUID (for freeItem type)
-  });
+  // Form Fields
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await fetch('/api/customers', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCustomers(data);
+        setFilteredCustomers(data);
+      } else {
+        showToast(data.message || 'Failed to fetch customers', 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   useEffect(() => {
     fetchCustomers();
-    fetchLoyaltySettings();
-    fetchMenuItems();
   }, []);
 
+  // Search Filter logic
   useEffect(() => {
     if (!search) {
       setFilteredCustomers(customers);
     } else {
-      const lower = search.toLowerCase();
+      const term = search.toLowerCase();
       setFilteredCustomers(customers.filter(c => 
-        (c.name && c.name.toLowerCase().includes(lower)) || 
-        (c.phone && c.phone.includes(lower))
+        c.name.toLowerCase().includes(term) || 
+        c.phone.includes(term)
       ));
     }
   }, [search, customers]);
 
-  const fetchCustomers = async () => {
+  // Load detailed profile (with orders, feedback, and favorite menu items calculated)
+  const handleCustomerClick = async (c) => {
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetch(`/api/customers/profile/${c._id}`, {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
       const data = await res.json();
-      setCustomers(data);
-      setFilteredCustomers(data);
-    } catch (err) {
-      console.error('Failed to fetch customers', err);
-    }
-  };
-
-  const fetchMenuItems = async () => {
-    try {
-      const res = await fetch('/api/menu');
       if (res.ok) {
-        setMenuItems(await res.json());
+        setActiveProfile(data);
+      } else {
+        showToast(data.message || 'Failed to load guest profile', 'error');
       }
     } catch (err) {
-      console.error('Failed to fetch menu items', err);
+      showToast(err.message, 'error');
     }
   };
 
-  const fetchLoyaltySettings = async () => {
-    try {
-      const res = await fetch('/api/loyalty-settings');
-      if (res.ok) {
-        const data = await res.json();
-        if (data && Object.keys(data).length > 0) {
-          setLoyaltySettings({
-            pointsPerOrder: data.pointsPerOrder ?? 1,
-            thresholdPoints: data.thresholdPoints ?? 10,
-            rewardType: data.rewardType ?? 'discount',
-            rewardValue: data.rewardValue ?? '10',
-            rewardItemId: data.rewardItemId ?? ''
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch loyalty settings', err);
+  // Add / Edit Modal trigger
+  const handleOpenModal = (c = null) => {
+    if (c) {
+      setEditId(c._id);
+      setName(c.name);
+      setPhone(c.phone);
+      setEmail(c.email || '');
+      setNotes(c.notes || '');
+    } else {
+      setEditId(null);
+      setName('');
+      setPhone('');
+      setEmail('');
+      setNotes('');
     }
+    setShowModal(true);
   };
 
-  const saveLoyaltySettings = async (e) => {
+  const handleSaveCustomer = async (e) => {
     e.preventDefault();
+
+    if (phone.length !== 10) {
+      showToast('Phone number must be exactly 10 digits', 'warning');
+      return;
+    }
+
+    const payload = { name, phone, email, notes };
+    const url = editId ? `/api/customers/${editId}` : '/api/customers';
+    const method = editId ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch('/api/loyalty-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loyaltySettings)
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast(`Customer account saved!`, 'success');
+        setShowModal(false);
+        fetchCustomers();
+        if (activeProfile && activeProfile._id === editId) {
+          handleCustomerClick(data); // refresh profile details
+        }
+      } else {
+        showToast(data.message || 'Saving customer failed', 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteCustomer = async (id) => {
+    if (!window.confirm('Delete this customer account? Past order linkages will become anonymous.')) return;
+
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${auth.token}` }
       });
       if (res.ok) {
-        const saved = await res.json();
-        setLoyaltySettings(prev => ({ ...prev, ...saved }));
-        alert('Loyalty settings saved successfully!');
-        setIsSettingsModalOpen(false);
+        showToast('Guest record removed successfully', 'success');
+        fetchCustomers();
+        if (activeProfile?._id === id) setActiveProfile(null);
       } else {
-        const err = await res.json();
-        alert('Failed to save settings: ' + (err.message || 'Unknown error'));
+        const data = await res.json();
+        showToast(data.message || 'Deletion failed', 'error');
       }
     } catch (err) {
-      console.error('Failed to save loyalty settings', err);
-      alert('Error saving settings');
+      showToast(err.message, 'error');
     }
   };
 
-  const handleCustomerClick = async (customer) => {
-    setSelectedCustomer(customer);
-    setLoadingOrders(true);
-    try {
-      // Mock API or real API to fetch orders by phone
-      const res = await fetch(`/api/orders`);
-      const allOrders = await res.json();
-      const cOrders = allOrders.filter(o => o.customerPhone === customer.phone || (o.customerDetails && o.customerDetails.phone === customer.phone));
-      setCustomerOrders(cOrders.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
-    } catch (err) {
-      console.error('Failed to fetch customer orders', err);
-    } finally {
-      setLoadingOrders(false);
+  // CSV Exporter
+  const handleExportCSV = () => {
+    if (customers.length === 0) {
+      showToast('No guest data available to export', 'warning');
+      return;
     }
+
+    const headers = ['Name', 'Phone', 'Email', 'Visits Count', 'Total Spent (INR)', 'First Visit', 'Last Visit', 'Notes'];
+    const rows = customers.map(c => [
+      c.name,
+      c.phone,
+      c.email || '',
+      c.totalVisits,
+      c.totalSpent,
+      c.firstVisitDate || '',
+      c.lastVisitDate || '',
+      c.notes || ''
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(r => r.map(val => `"${val}"`).join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Customer_Loyalty_List_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Customer directory spreadsheet downloaded!', 'success');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', height: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Users color="var(--primary)" /> Customers & Loyalty
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage your customer base and loyalty programs</p>
-        </div>
+    <div style={{ display: 'flex', gap: '2rem', height: '88vh', overflow: 'hidden' }} className="mobile-stack">
+      
+      {/* 1. MAIN PANEL: CUSTOMERS DIRECTORY */}
+      <div style={{ flex: 1.3, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <div style={{ position: 'relative', width: '300px' }}>
-            <Search size={20} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
-            <input 
-              type="text" 
-              placeholder="Search by name or phone..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ paddingLeft: '3rem', borderRadius: 'var(--radius-xl)', background: '#ffffff', boxShadow: 'var(--shadow-sm)' }} 
-            />
+        {/* Header and Actions bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)' }}>Customers directory</h1>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Manage customer profiles, loyalty spent totals, and favorite products.</span>
           </div>
-          <button className="btn btn-secondary" onClick={() => setIsSettingsModalOpen(true)}>
-            <Settings size={20} /> Loyalty Settings
-          </button>
-        </div>
-      </div>
 
-      <div style={{ display: 'flex', gap: '2rem', flex: 1, minHeight: 0 }}>
-        {/* Customers List */}
-        <div className="glass" style={{ flex: 1, borderRadius: 'var(--radius-lg)', overflowY: 'auto', padding: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={handleExportCSV} className="btn btn-secondary" style={{ height: '2.5rem', padding: '0 1rem' }}>
+              <Download size={16} /> Export CSV
+            </button>
+            <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
+              <Plus size={16} /> Add Customer
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div style={{ position: 'relative', marginBottom: '1.5rem', flexShrink: 0 }}>
+          <Search size={18} color="var(--text-subtle)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+          <input 
+            type="text" 
+            placeholder="Search by name or phone..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingLeft: '2.75rem', height: '2.75rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-panel)' }}
+          />
+        </div>
+
+        {/* Customer Cards grid list */}
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="custom-scroll">
           {filteredCustomers.length === 0 ? (
-            <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem' }}>No customers found.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '30vh', color: 'var(--text-muted)' }}>
+              <Users size={48} style={{ opacity: 0.4, marginBottom: '1rem' }} />
+              <p>No customer profiles found.</p>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {filteredCustomers.map(customer => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              {filteredCustomers.map(c => (
                 <div 
-                  key={customer._id || customer.id} 
-                  onClick={() => handleCustomerClick(customer)}
-                  style={{ 
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                    padding: '1.25rem', background: selectedCustomer?._id === customer._id ? 'rgba(16, 185, 129, 0.1)' : '#ffffff', 
-                    borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px solid',
-                    borderColor: selectedCustomer?._id === customer._id ? 'var(--primary)' : 'var(--border)',
-                    transition: 'var(--transition)'
+                  key={c._id} 
+                  className="pos-item-card"
+                  onClick={() => handleCustomerClick(c)}
+                  style={{
+                    alignItems: 'flex-start',
+                    textAlign: 'left',
+                    padding: '1.5rem',
+                    border: `1px solid ${activeProfile?._id === c._id ? 'var(--primary)' : 'var(--border)'}`,
+                    backgroundColor: activeProfile?._id === c._id ? 'rgba(140, 98, 57, 0.03)' : 'var(--bg-panel)'
                   }}
-                  className="hover-brighten"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--bg-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <UserCircle size={28} color="var(--text-muted)" />
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{c.name}</h3>
+                      {/* VIP Gold Star badge for > 10 visits */}
+                      {c.isVIP && (
+                        <span style={{ color: '#f0ad4e', display: 'inline-flex', alignItems: 'center' }} title="VIP Guest (>10 visits)">
+                          <Award size={18} fill="#f0ad4e" />
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '0.25rem' }} onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => handleOpenModal(c)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', padding: '0.25rem' }} title="Edit"><Edit size={14} /></button>
+                      <button onClick={() => handleDeleteCustomer(c._id)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d9534f', padding: '0.25rem' }} title="Delete"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1rem', fontWeight: '600' }}>
+                    Phone: {c.phone}
+                  </span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.75rem', width: '100%', borderTop: '1px dashed var(--border)', paddingTop: '0.75rem' }}>
+                    <div>
+                      <span style={{ color: 'var(--text-subtle)', display: 'block', fontWeight: '700' }}>TOTAL VISITS</span>
+                      <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '0.9rem' }}>{c.totalVisits} visit(s)</span>
                     </div>
                     <div>
-                      <h4 style={{ margin: '0 0 0.25rem 0' }}>{customer.name}</h4>
-                      <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{customer.phone}</p>
+                      <span style={{ color: 'var(--text-subtle)', display: 'block', fontWeight: '700' }}>TOTAL SPENT</span>
+                      <span style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '0.9rem' }}>₹{c.totalSpent?.toFixed(1)}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Loyalty Points</div>
-                      <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{customer.loyaltyPoints || customer.loyalty_points || 0} pts</div>
-                    </div>
-                    <ChevronRight size={20} color="var(--text-muted)" />
-                  </div>
+
                 </div>
               ))}
             </div>
           )}
         </div>
+      </div>
 
-        {/* Customer Details */}
-        {selectedCustomer && (
-          <div className="glass animate-slide-up" style={{ width: '400px', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '2rem', background: 'var(--bg-dark)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
-              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
-                <UserCircle size={48} color="var(--primary)" />
+      {/* 2. SIDE DRAWER PANEL: GUEST FULL PROFILE TIMELINES */}
+      {activeProfile && (
+        <div className="glass animate-slide-up" style={{ 
+          width: '380px', 
+          backgroundColor: 'var(--bg-panel)', 
+          borderLeft: '1px solid var(--border)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '2rem',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '86vh',
+          flexShrink: 0
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.25rem', flexShrink: 0 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>{activeProfile.name}</h3>
+                {activeProfile.isVIP && <Award size={18} fill="#f0ad4e" color="#f0ad4e" />}
               </div>
-              <h2 style={{ margin: '0 0 0.5rem 0' }}>{selectedCustomer.name}</h2>
-              <p style={{ margin: 0, color: 'var(--text-muted)' }}>{selectedCustomer.phone}</p>
-              
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
-                <div style={{ background: '#ffffff', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Orders</div>
-                  <div style={{ fontWeight: 'bold' }}>{customerOrders.length}</div>
-                </div>
-                <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>Loyalty Points</div>
-                  <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{selectedCustomer.loyaltyPoints || selectedCustomer.loyalty_points || 0}</div>
-                </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700' }}>Phone: {activeProfile.phone}</span>
+            </div>
+            <button onClick={() => setActiveProfile(null)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+          </div>
+
+          {/* Scrollable details: orders, feedback, favorites */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="custom-scroll">
+            
+            {/* Quick Metrics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', backgroundColor: 'var(--bg-dark)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-subtle)', display: 'block' }}>FAVORITE DRINK/BITES</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--primary)' }}>{activeProfile.favoriteItem}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-subtle)', display: 'block' }}>VISITS TRACKED</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)' }}>{activeProfile.totalVisits} time(s)</span>
               </div>
             </div>
 
-            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', background: '#ffffff' }}>
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Receipt size={18} /> Order History
-              </h3>
-              
-              {loadingOrders ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Loading orders...</p>
-              ) : customerOrders.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No previous orders found.</p>
+            {activeProfile.notes && (
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-subtle)', display: 'block', marginBottom: '0.25rem' }}>GUEST SPECIAL INSTRUCTIONS</span>
+                <p style={{ fontSize: '0.8rem', fontStyle: 'italic', background: 'var(--border-light)', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}>{activeProfile.notes}</p>
+              </div>
+            )}
+
+            {/* Past Orders list */}
+            <div>
+              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-subtle)', display: 'block', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <ShoppingBag size={12} /> PAST ORDERS LEDGER ({activeProfile.orders?.length || 0})
+              </span>
+
+              {(!activeProfile.orders || activeProfile.orders.length === 0) ? (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No purchases recorded yet.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {customerOrders.map(order => (
-                    <div key={order._id || order.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                        <span style={{ fontWeight: 600 }}>{order.invoiceNumber}</span>
-                        <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>₹{order.totalAmount?.toFixed(2)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }} className="custom-scroll">
+                  {activeProfile.orders.map(order => (
+                    <div key={order._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-panel)' }}>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-main)' }}>{order.orderCode}</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-subtle)', display: 'block' }}>{new Date(order.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={14} /> {new Date(order.createdAt).toLocaleDateString()}</span>
-                        <span>{order.paymentMethod}</span>
-                      </div>
-                      <div style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
-                        {order.items?.map((item, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>{item.quantity}x {item.menuItem?.name || 'Item'}</span>
-                          </div>
-                        ))}
-                      </div>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)' }}>₹{Number(order.grandTotal).toFixed(1)}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Loyalty Settings Modal */}
-      {isSettingsModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass animate-slide-up" style={{ width: '450px', borderRadius: 'var(--radius-lg)', padding: '2rem', background: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Gift color="var(--primary)" /> Loyalty Settings
-              </h2>
-              <button onClick={() => setIsSettingsModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} color="var(--text-muted)" /></button>
-            </div>
+            {/* Customer reviews feedback history */}
+            <div>
+              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-subtle)', display: 'block', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <MessageSquare size={12} /> GUEST REVIEWS SUBMITTED ({activeProfile.feedback?.length || 0})
+              </span>
 
-            <form onSubmit={saveLoyaltySettings} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Points Granted per Order</label>
-                <input 
-                  type="number" 
-                  required 
-                  min="0"
-                  value={loyaltySettings.pointsPerOrder} 
-                  onChange={e => setLoyaltySettings({...loyaltySettings, pointsPerOrder: Number(e.target.value)})} 
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Threshold Points for Reward</label>
-                <input 
-                  type="number" 
-                  required 
-                  min="1"
-                  value={loyaltySettings.thresholdPoints} 
-                  onChange={e => setLoyaltySettings({...loyaltySettings, thresholdPoints: Number(e.target.value)})} 
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Reward Type</label>
-                <select 
-                  value={loyaltySettings.rewardType} 
-                  onChange={e => setLoyaltySettings({...loyaltySettings, rewardType: e.target.value, rewardValue: '', rewardItemId: ''})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}
-                >
-                  <option value="discount">Percentage Discount</option>
-                  <option value="freeItem">Free Dish</option>
-                </select>
-              </div>
-
-              {loyaltySettings.rewardType === 'discount' ? (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Discount Percentage (%)</label>
-                  <input 
-                    type="number" 
-                    required 
-                    min="1" max="100"
-                    value={loyaltySettings.rewardValue} 
-                    onChange={e => setLoyaltySettings({...loyaltySettings, rewardValue: String(e.target.value)})} 
-                  />
-                </div>
+              {(!activeProfile.feedback || activeProfile.feedback.length === 0) ? (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No feedback comments submitted.</p>
               ) : (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Select Free Dish</label>
-                  <select 
-                    required 
-                    value={loyaltySettings.rewardItemId} 
-                    onChange={e => {
-                      const selected = menuItems.find(m => (m._id || m.id) === e.target.value);
-                      setLoyaltySettings({
-                        ...loyaltySettings, 
-                        rewardItemId: e.target.value,
-                        rewardValue: selected ? selected.name : ''
-                      });
-                    }}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}
-                  >
-                    <option value="" disabled>Select a dish...</option>
-                    {menuItems
-                      .filter(item => !item.isCustomization && !item.is_customization && item.isAvailable !== false)
-                      .map(item => (
-                        <option key={item._id || item.id} value={item._id || item.id}>
-                          {item.name} — ₹{item.price}
-                        </option>
-                      ))
-                    }
-                  </select>
-                  {loyaltySettings.rewardItemId && loyaltySettings.rewardValue && (
-                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--primary)' }}>
-                      ✓ Free dish set to: <strong>{loyaltySettings.rewardValue}</strong>
-                    </p>
-                  )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '160px', overflowY: 'auto' }} className="custom-scroll">
+                  {activeProfile.feedback.map(fb => (
+                    <div key={fb._id} style={{ padding: '0.6rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'rgba(140, 98, 57, 0.02)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.7rem' }}>
+                        <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>Product: {fb.menuItem}</span>
+                        <span style={{ color: '#f0ad4e', fontWeight: '800' }}>★ {fb.rating}</span>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', fontStyle: 'italic', margin: 0, color: 'var(--text-muted)' }}>"{fb.comment || 'No comment'}"</p>
+                    </div>
+                  ))}
                 </div>
               )}
+            </div>
 
-              <button type="submit" className="btn btn-primary" style={{ padding: '1rem', marginTop: '0.5rem' }}>
-                Save Settings
+          </div>
+        </div>
+      )}
+
+      {/* 3. ADD / EDIT GUEST PROFILE MODAL */}
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass" style={{
+            width: '420px',
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                {editId ? 'Modify Guest Details' : 'Onboard Guest'}
+              </h3>
+              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleSaveCustomer} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Customer Name</label>
+                <input type="text" required placeholder="E.g. Rahul Sharma" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Phone Number (10 digits)</label>
+                <input type="tel" maxLength={10} required placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Email Address</label>
+                <input type="email" placeholder="rahul.sharma@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Special Notes / Preferences</label>
+                <textarea rows="3" placeholder="Loves extra foam cappuccino. No sugar." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ padding: '0.5rem' }} />
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '2.6rem', marginTop: '0.5rem', justifyContent: 'center' }}>
+                Save Guest Profile
               </button>
+
             </form>
           </div>
         </div>
       )}
+
     </div>
   );
 };

@@ -9,8 +9,7 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// NOTE: Socket.io has limited support on Vercel Serverless.
-// It may connect but will disconnect frequently.
+// WebSockets link for real-time dashboard events
 const io = new Server(httpServer, {
   cors: {
     origin: '*',
@@ -21,27 +20,41 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
+// Inject WebSocket instance in requests
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
 
+// Import route files
 import authRoutes from './routes/authRoutes.js';
 import inventoryRoutes from './routes/inventoryRoutes.js';
 import menuRoutes from './routes/menuRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import loyaltyRoutes from './routes/loyaltyRoutes.js';
+import supplierRoutes from './routes/supplierRoutes.js';
+import expenseRoutes from './routes/expenseRoutes.js';
+import staffRoutes from './routes/staffRoutes.js';
+import wasteRoutes from './routes/wasteRoutes.js';
+import feedbackRoutes from './routes/feedbackRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 
+// Map API endpoints
 app.use('/api/auth', authRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/loyalty-settings', loyaltyRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/expenses', expenseRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/waste', wasteRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/reports', reportRoutes);
 
+// Socket.io handlers
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
   socket.on('disconnect', () => {
@@ -49,9 +62,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Supabase is used instead of MongoDB. The connection is handled in individual controllers or the config file.
-
-// CRITICAL FIX: Export the app for Vercel
+// Export app for serverless platforms like Vercel
 export default app;
 
 const PORT = process.env.PORT || 5001;

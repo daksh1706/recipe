@@ -1,347 +1,703 @@
-import React, { useState, useEffect } from 'react';
-import { Package, AlertCircle, Plus, Edit2, Trash2, X, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { ToastContext } from '../App';
+import { 
+  Package, Plus, Edit, Trash2, Calendar, FileText, X, AlertTriangle, ArrowRight, DollarSign, Filter, RefreshCw
+} from 'lucide-react';
 
-const InventoryDashboard = () => {
-  const [inventory, setInventory] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isPrepareModalOpen, setIsPrepareModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [preparingItem, setPreparingItem] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    unit: 'kg',
-    currentStock: '',
-    lowStockThreshold: '',
-    recipe: []
-  });
+const InventoryDashboard = ({ userRole }) => {
+  const { showToast } = useContext(ToastContext);
+  const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
 
-  const [prepareQuantity, setPrepareQuantity] = useState('');
+  // Active view tabs: 'stock' or 'transactions'
+  const [activeTab, setActiveTab] = useState('stock');
+
+  // Roster States
+  const [rawMaterials, setRawMaterials] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Modals States
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [showRestockModal, setShowRestockModal] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [restockId, setRestockId] = useState(null);
+  const [restockItemName, setRestockItemName] = useState('');
+
+  // Form Fields (CRUD raw material)
+  const [itemCode, setItemCode] = useState('');
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('coffee_beans');
+  const [unit, setUnit] = useState('g');
+  const [currentStock, setCurrentStock] = useState('');
+  const [minimumStockLevel, setMinimumStockLevel] = useState('');
+  const [reorderQuantity, setReorderQuantity] = useState('');
+  const [costPerUnit, setCostPerUnit] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const [storageLocation, setStorageLocation] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+
+  // Restock Field
+  const [restockQty, setRestockQty] = useState('');
+  const [restockNotes, setRestockNotes] = useState('');
+
+  const categories = [
+    { value: 'coffee_beans', label: 'Coffee Beans' },
+    { value: 'milk_dairy', label: 'Milk & Dairy' },
+    { value: 'syrups_sauces', label: 'Syrups & Sauces' },
+    { value: 'bakery', label: 'Bakery Pastries' },
+    { value: 'fruits', label: 'Fruits' },
+    { value: 'packaging', label: 'Packaging Cups' },
+    { value: 'cleaning', label: 'Cleaning Supplies' },
+    { value: 'other', label: 'Other Items' }
+  ];
+
+  const units = ['ml', 'l', 'g', 'kg', 'pinch', 'piece', 'tsp', 'tbsp', 'cup'];
+
+  const fetchData = async () => {
+    try {
+      // 1. Fetch Raw Materials
+      const res = await fetch('/api/inventory', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setRawMaterials(data);
+
+      // 2. Fetch Suppliers for dropdown links
+      const supRes = await fetch('/api/suppliers', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      const supData = await supRes.json();
+      if (supRes.ok) setSuppliers(supData);
+
+      // 3. Fetch Stock Transactions Ledger
+      const txRes = await fetch('/api/inventory/transactions', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      const txData = await txRes.json();
+      if (txRes.ok) setTransactions(txData);
+
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetchInventory();
+    fetchData();
   }, []);
 
-  const fetchInventory = async () => {
-    try {
-      const res = await fetch('/api/inventory');
-      if (res.ok) {
-        const data = await res.json();
-        setInventory(data);
-      }
-    } catch (err) {
-      console.error(err);
+  // Summary Metrics calculations
+  const calculateAssets = () => {
+    let totalVal = 0;
+    let lowCount = 0;
+    let outCount = 0;
+
+    rawMaterials.forEach(m => {
+      totalVal += Number(m.totalValue || 0);
+      if (m.currentStock === 0) outCount++;
+      else if (m.currentStock <= m.minimumStockLevel) lowCount++;
+    });
+
+    return { totalVal, lowCount, outCount };
+  };
+
+  const assets = calculateAssets();
+
+  // Status Badge Colors
+  const getBadgeStyle = (status) => {
+    switch (status) {
+      case 'in_stock': return { label: 'In Stock', color: '#5cb85c', bg: 'rgba(92,184,92,0.15)' };
+      case 'low_stock': return { label: 'Low Stock', color: '#f0ad4e', bg: 'rgba(240,173,78,0.15)' };
+      case 'out_of_stock': return { label: 'Out of Stock', color: '#d9534f', bg: 'rgba(217,83,79,0.15)' };
+      default: return { label: 'Unknown', color: 'var(--text-muted)', bg: 'var(--border)' };
     }
   };
 
-  const openModal = (item = null) => {
-    if (item) {
-      setEditingItem(item);
-      setFormData({
-        name: item.name,
-        unit: item.unit,
-        currentStock: item.currentStock,
-        lowStockThreshold: item.lowStockThreshold,
-        recipe: item.recipe || []
-      });
+  // CRUD triggers: raw material
+  const handleOpenFormModal = (m = null) => {
+    if (m) {
+      setEditId(m._id);
+      setItemCode(m.itemCode);
+      setName(m.name);
+      setCategory(m.category);
+      setUnit(m.unit);
+      setCurrentStock(m.currentStock);
+      setMinimumStockLevel(m.minimumStockLevel);
+      setReorderQuantity(m.reorderQuantity);
+      setCostPerUnit(m.costPerUnit);
+      setSupplierId(m.supplierId || '');
+      setStorageLocation(m.storageLocation || '');
+      setExpiryDate(m.expiryDate ? m.expiryDate.split('T')[0] : '');
     } else {
-      setEditingItem(null);
-      setFormData({ name: '', unit: 'kg', currentStock: '', lowStockThreshold: '', recipe: [] });
+      setEditId(null);
+      setItemCode(`RM-${Math.random().toString(36).substring(2, 7).toUpperCase()}`);
+      setName('');
+      setCategory('coffee_beans');
+      setUnit('g');
+      setCurrentStock('');
+      setMinimumStockLevel('');
+      setReorderQuantity('');
+      setCostPerUnit('');
+      setSupplierId('');
+      setStorageLocation('');
+      setExpiryDate('');
     }
-    setIsModalOpen(true);
+    setShowFormModal(true);
   };
 
-  const handleAddRecipeItem = () => {
-    if (inventory.length > 0) {
-      setFormData({
-        ...formData,
-        recipe: [...formData.recipe, { ingredient: inventory[0]._id, quantity: '' }]
-      });
-    }
-  };
-
-  const handleRecipeChange = (index, field, value) => {
-    const newRecipe = [...formData.recipe];
-    newRecipe[index][field] = value;
-    setFormData({ ...formData, recipe: newRecipe });
-  };
-
-  const handleRemoveRecipeItem = (index) => {
-    const newRecipe = formData.recipe.filter((_, i) => i !== index);
-    setFormData({ ...formData, recipe: newRecipe });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSaveMaterial = async (e) => {
     e.preventDefault();
+
+    const payload = {
+      itemCode,
+      name,
+      category,
+      unit,
+      currentStock: Number(currentStock),
+      minimumStockLevel: Number(minimumStockLevel),
+      reorderQuantity: Number(reorderQuantity),
+      costPerUnit: Number(costPerUnit),
+      supplierId: supplierId || null,
+      storageLocation,
+      expiryDate: expiryDate || null
+    };
+
+    const url = editId ? `/api/inventory/${editId}` : '/api/inventory';
+    const method = editId ? 'PUT' : 'POST';
+
     try {
-      const url = editingItem ? `/api/inventory/${editingItem._id}` : '/api/inventory';
-      const method = editingItem ? 'PUT' : 'POST';
-      
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          currentStock: Number(formData.currentStock) || 0,
-          lowStockThreshold: Number(formData.lowStockThreshold) || 0,
-          recipe: formData.recipe.map(r => ({ ...r, quantity: Number(r.quantity) || 0 }))
-        })
-      });
-
-      if (res.ok) {
-        fetchInventory();
-        setIsModalOpen(false);
-      }
-    } catch (error) {
-      console.error('Error saving ingredient', error);
-    }
-  };
-
-  const handlePrepareBatch = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`/api/inventory/${preparingItem._id}/prepare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantityToPrepare: Number(prepareQuantity) })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        fetchInventory();
-        setIsPrepareModalOpen(false);
-        setPrepareQuantity('');
-        setPreparingItem(null);
+        showToast('Inventory material saved successfully!', 'success');
+        setShowFormModal(false);
+        fetchData();
       } else {
         const err = await res.json();
-        alert('Failed to prepare batch: ' + err.message);
+        showToast(err.message || 'Saving failed', 'error');
       }
     } catch (err) {
-      console.error(err);
+      showToast(err.message, 'error');
     }
   };
 
-  const deleteItem = async (id) => {
-    await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
-    fetchInventory();
-    setDeleteConfirm(null);
+  const handleDeleteMaterial = async (id, mName) => {
+    if (!window.confirm(`Delete ${mName} from inventory rosters? This will clear stock transaction histories too.`)) return;
+
+    try {
+      const res = await fetch(`/api/inventory/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      if (res.ok) {
+        showToast('Raw material removed', 'success');
+        fetchData();
+      } else {
+        const data = await res.json();
+        showToast(data.message || 'Deletion failed', 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   };
 
+  // Restocking Modal Trigger
+  const handleOpenRestock = (m) => {
+    setRestockId(m._id);
+    setRestockItemName(m.name);
+    setRestockQty(m.reorderQuantity || 50);
+    setRestockNotes('Standard manual stock replenishment');
+    setShowRestockModal(true);
+  };
+
+  const handleSaveRestock = async (e) => {
+    e.preventDefault();
+
+    if (!restockQty || Number(restockQty) <= 0) {
+      showToast('Quantity must be greater than 0', 'warning');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/inventory/${restockId}/restock`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`
+        },
+        body: JSON.stringify({ quantity: Number(restockQty), notes: restockNotes })
+      });
+      if (res.ok) {
+        showToast(`Stock replenished for ${restockItemName}!`, 'success');
+        setShowRestockModal(false);
+        fetchData();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Restock failed', 'error');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // Filter raw materials list locally
+  const filteredMaterials = rawMaterials.filter(m => {
+    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          m.itemCode.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCat = categoryFilter ? m.category === categoryFilter : true;
+    const matchesStatus = statusFilter ? m.status === statusFilter : true;
+    return matchesSearch && matchesCat && matchesStatus;
+  });
+
+  const isBarista = userRole === 'barista';
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          {[1,2,3].map(i => (
+            <div key={i} className="glass skeleton" style={{ height: '100px', borderRadius: 'var(--radius-md)' }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      
+      {/* Header action bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Inventory</h1>
-          <p style={{ color: 'var(--text-muted)' }}>Manage raw materials and pre-cooked batches</p>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)' }}>Inventory Stock</h1>
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Monitor raw physical materials, safety alert thresholds, reorders, and stock transaction trace logs.</span>
         </div>
-        <button className="btn btn-primary" onClick={() => openModal()}>
-          <Plus size={18} /> Add Item
+
+        {!isBarista && (
+          <button onClick={() => handleOpenFormModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
+            <Plus size={16} /> Add Material
+          </button>
+        )}
+      </div>
+
+      {/* Asset summaries top decks */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }} className="mobile-stack">
+        <div className="glass" style={{ padding: '1rem 1.5rem', borderRadius: 'var(--radius-md)', borderLeft: '4px solid var(--primary)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '0.5rem', borderRadius: '50%', background: 'rgba(140, 98, 57, 0.1)', color: 'var(--primary)' }}>
+            <DollarSign size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>TOTAL INVENTORY ASSET VALUE</span>
+            <span style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-main)' }}>₹{assets.totalVal?.toFixed(1)}</span>
+          </div>
+        </div>
+
+        <div className="glass" style={{ padding: '1rem 1.5rem', borderRadius: 'var(--radius-md)', borderLeft: '4px solid #f0ad4e', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '0.5rem', borderRadius: '50%', background: 'rgba(240, 173, 78, 0.15)', color: '#f0ad4e' }}>
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>LOW STOCK ITEMS ALERT</span>
+            <span style={{ fontSize: '1.4rem', fontWeight: '800', color: assets.lowCount > 0 ? '#f0ad4e' : 'var(--text-main)' }}>{assets.lowCount} item(s)</span>
+          </div>
+        </div>
+
+        <div className="glass" style={{ padding: '1rem 1.5rem', borderRadius: 'var(--radius-md)', borderLeft: '4px solid #d9534f', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ padding: '0.5rem', borderRadius: '50%', background: 'rgba(217, 83, 79, 0.15)', color: '#d9534f' }}>
+            <X size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>OUT OF STOCK CRITICAL</span>
+            <span style={{ fontSize: '1.4rem', fontWeight: '800', color: assets.outCount > 0 ? '#d9534f' : 'var(--text-main)' }}>{assets.outCount} item(s)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs list (Stock levels vs Transaction logs) */}
+      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+        <button
+          onClick={() => setActiveTab('stock')}
+          style={{
+            padding: '0.5rem 1rem',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: '700',
+            fontSize: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: activeTab === 'stock' ? 'var(--primary)' : 'transparent',
+            color: activeTab === 'stock' ? 'white' : 'var(--text-muted)',
+            transition: 'var(--transition)'
+          }}
+        >
+          Raw Materials Stock Levels
+        </button>
+        <button
+          onClick={() => setActiveTab('transactions')}
+          style={{
+            padding: '0.5rem 1rem',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: '700',
+            fontSize: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: activeTab === 'transactions' ? 'var(--primary)' : 'transparent',
+            color: activeTab === 'transactions' ? 'white' : 'var(--text-muted)',
+            transition: 'var(--transition)'
+          }}
+        >
+          Stock Transaction History Logs
         </button>
       </div>
 
-      <div className="glass" style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
-            <tr>
-              <th style={{ padding: '1.25rem' }}>Item Name</th>
-              <th style={{ padding: '1.25rem' }}>Current Stock</th>
-              <th style={{ padding: '1.25rem' }}>Status</th>
-              <th style={{ padding: '1.25rem' }}>Type</th>
-              <th style={{ padding: '1.25rem', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inventory.map((item) => (
-              <tr key={item._id} className="table-row-hover" style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ padding: '1.25rem', fontWeight: '500' }}>{item.name}</td>
-                <td style={{ padding: '1.25rem', fontFamily: 'monospace', fontSize: '1.1rem' }}>
-                  {item.currentStock} {item.unit}
-                </td>
-                <td style={{ padding: '1.25rem' }}>
-                  {item.currentStock <= item.lowStockThreshold ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--error)', background: 'rgba(239, 68, 68, 0.1)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.85rem' }}>
-                      <AlertCircle size={14} /> Low Stock
-                    </span>
-                  ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--accent)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.85rem' }}>
-                      <Package size={14} /> In Stock
-                    </span>
-                  )}
-                </td>
-                <td style={{ padding: '1.25rem' }}>
-                  {item.recipe && item.recipe.length > 0 ? (
-                    <span style={{ color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600 }}>Pre-Cooked Batch</span>
-                  ) : (
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Raw Material</span>
-                  )}
-                </td>
-                <td style={{ padding: '1.25rem', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                    {item.recipe && item.recipe.length > 0 && (
-                      <button 
-                        onClick={() => { setPreparingItem(item); setIsPrepareModalOpen(true); }}
-                        className="btn btn-primary" 
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-                      >
-                        <RefreshCw size={14} /> Prepare
-                      </button>
-                    )}
-                    <button onClick={() => openModal(item)} style={{ background: 'transparent', border: 'none', color: 'var(--info)', cursor: 'pointer', padding: '0.5rem' }}>
-                      <Edit2 size={18} />
-                    </button>
-                    <button onClick={() => setDeleteConfirm({ id: item._id, name: item.name })} style={{ background: 'transparent', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '0.5rem' }}>
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {inventory.length === 0 && (
-              <tr>
-                <td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No inventory items found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add/Edit Modal */}
-      {isModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass animate-slide-up" style={{ width: '600px', borderRadius: 'var(--radius-lg)', padding: '2.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{editingItem ? 'Edit Item' : 'Add Item'}</h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
-            </div>
+      {/* TAB CONTENT 1: STOCK LEVELS */}
+      {activeTab === 'stock' && (
+        <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          
+          {/* Advanced filters console */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px dashed var(--border)', paddingBottom: '1rem' }}>
+            <Filter size={16} color="var(--text-subtle)" />
             
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <div style={{ flex: 2 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Name</label>
-                  <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Flour, Pizza Dough" />
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '180px', height: '2.2rem', fontSize: '0.8rem', borderRadius: '4px' }}
+            />
+
+            <select 
+              value={categoryFilter} 
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              style={{ width: '140px', height: '2.2rem', padding: '0 0.5rem', fontSize: '0.8rem', borderRadius: '4px' }}
+            >
+              <option value="">All Categories</option>
+              {categories.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{ width: '130px', height: '2.2rem', padding: '0 0.5rem', fontSize: '0.8rem', borderRadius: '4px' }}
+            >
+              <option value="">All Statuses</option>
+              <option value="in_stock">In Stock</option>
+              <option value="low_stock">Low Stock</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
+
+            {(searchTerm || categoryFilter || statusFilter) && (
+              <button 
+                onClick={() => { setSearchTerm(''); setCategoryFilter(''); setStatusFilter(''); }}
+                style={{ border: 'none', background: 'transparent', color: '#d9534f', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.8rem', fontWeight: '700' }}
+              >
+                <X size={14} /> Clear
+              </button>
+            )}
+          </div>
+
+          {/* Raw Materials Stocks Table */}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Code</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Name</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Category</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Current Stock</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Cost/Unit</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Total Assets Value</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Supplier</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Safety Status</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMaterials.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" style={{ padding: '3rem 0', textAlign: 'center', color: 'var(--text-subtle)' }}>No materials found.</td>
+                  </tr>
+                ) : (
+                  filteredMaterials.map(m => {
+                    const badge = getBadgeStyle(m.status);
+                    return (
+                      <tr key={m._id} className="hover-brighten">
+                        <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-subtle)', fontSize: '0.75rem', fontWeight: '700' }}>{m.itemCode}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', fontSize: '0.85rem' }}>{m.name}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', textTransform: 'capitalize' }}>{m.category.replace('_', ' ')}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>{m.currentStock} {m.unit}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem' }}>₹{Number(m.costPerUnit).toFixed(2)}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', color: 'var(--primary)' }}>₹{m.totalValue?.toFixed(1)}</td>
+                        <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{m.supplier ? m.supplier.name : 'None'}</td>
+                        
+                        <td style={{ padding: '0.85rem 0.5rem' }}>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: '800',
+                            textTransform: 'uppercase',
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '30px',
+                            backgroundColor: badge.bg,
+                            color: badge.color
+                          }}>{badge.label}</span>
+                        </td>
+
+                        <td style={{ padding: '0.85rem 0.5rem' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <button 
+                              onClick={() => handleOpenRestock(m)} 
+                              className="btn btn-secondary" 
+                              style={{ height: '1.8rem', padding: '0 0.5rem', fontSize: '0.7rem', fontWeight: '700', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                            >
+                              Restock
+                            </button>
+                            
+                            {!isBarista && (
+                              <>
+                                <button onClick={() => handleOpenFormModal(m)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', padding: '0.25rem' }} title="Edit"><Edit size={14} /></button>
+                                <button onClick={() => handleDeleteMaterial(m._id, m.name)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d9534f', padding: '0.25rem' }} title="Delete"><Trash2 size={14} /></button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB CONTENT 2: TRANSACTION HISTORY LOGS */}
+      {activeTab === 'transactions' && (
+        <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', overflowX: 'auto' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={18} color="var(--primary)" /> Stock Transaction Ledger
+          </h3>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+            <thead>
+              <tr>
+                <th style={{ padding: '0.75rem 0.5rem' }}>Timestamp</th>
+                <th style={{ padding: '0.75rem 0.5rem' }}>Material</th>
+                <th style={{ padding: '0.75rem 0.5rem' }}>Type</th>
+                <th style={{ padding: '0.75rem 0.5rem' }}>Quantity</th>
+                <th style={{ padding: '0.75rem 0.5rem' }}>Logged notes comments</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ padding: '3rem 0', textAlign: 'center', color: 'var(--text-subtle)' }}>No stock transactions recorded in ledger.</td>
+                </tr>
+              ) : (
+                transactions.map(tx => (
+                  <tr key={tx._id} className="hover-brighten">
+                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-subtle)', fontSize: '0.75rem' }}>{new Date(tx.created_at).toLocaleString()}</td>
+                    <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', fontSize: '0.85rem' }}>{tx.rawMaterial ? tx.rawMaterial.name : 'Unknown Material'}</td>
+                    
+                    <td style={{ padding: '0.85rem 0.5rem' }}>
+                      <span style={{
+                        fontSize: '0.65rem',
+                        fontWeight: '800',
+                        textTransform: 'uppercase',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '30px',
+                        backgroundColor: tx.transaction_type === 'restock' ? 'rgba(92,184,92,0.15)' : (tx.transaction_type === 'deduction' ? 'rgba(91,192,222,0.15)' : 'rgba(217,83,79,0.15)'),
+                        color: tx.transaction_type === 'restock' ? '#5cb85c' : (tx.transaction_type === 'deduction' ? '#5bc0de' : '#d9534f')
+                      }}>{tx.transaction_type}</span>
+                    </td>
+
+                    <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700' }}>
+                      {tx.transaction_type === 'deduction' || tx.transaction_type === 'waste' ? '-' : '+'}{tx.quantity} {tx.rawMaterial?.unit}
+                    </td>
+
+                    <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{tx.notes || 'N/A'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* CRUD MODAL FOR ADDING / EDITING RAW MATERIALS */}
+      {showFormModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass animate-slide-up" style={{
+            width: '560px',
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                {editId ? 'Modify Material Specifications' : 'Onboard Raw Material'}
+              </h3>
+              <button onClick={() => setShowFormModal(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleSaveMaterial} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '70vh', overflowY: 'auto', paddingRight: '0.25rem' }} className="custom-scroll">
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Material Item Code</label>
+                  <input type="text" required placeholder="RM-COF-001" value={itemCode} onChange={(e) => setItemCode(e.target.value)} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Unit</label>
-                  <select value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})}>
-                    <option value="kg">kg</option>
-                    <option value="g">g</option>
-                    <option value="L">L</option>
-                    <option value="ml">ml</option>
-                    <option value="pcs">pcs</option>
+                
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Category Segment</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {categories.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1.5rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Current Stock</label>
-                  <input type="number" required value={formData.currentStock} onChange={e => setFormData({...formData, currentStock: e.target.value})} placeholder="e.g. 50" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Low Stock Alert At</label>
-                  <input type="number" required value={formData.lowStockThreshold} onChange={e => setFormData({...formData, lowStockThreshold: e.target.value})} placeholder="e.g. 10" />
-                </div>
-              </div>
-
-              {/* Recipe for Pre-Cooked Items */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem', background: 'var(--bg-dark)', padding: '1.5rem', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', margin: '0 0 0.25rem 0' }}>Batch Recipe (Optional)</h3>
-                    <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>If this is a pre-cooked item, list its raw ingredients</p>
-                  </div>
-                  <button type="button" className="btn btn-secondary" onClick={handleAddRecipeItem} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                    <Plus size={14} /> Add Raw Material
-                  </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Product Name</label>
+                  <input type="text" required placeholder="Whole Milk / Espresso Beans" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 
-                {formData.recipe.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center', background: '#ffffff', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
-                    <select 
-                      style={{ flex: 2, background: 'var(--bg-dark)' }} 
-                      value={r.ingredient} 
-                      onChange={e => handleRecipeChange(i, 'ingredient', e.target.value)}
-                    >
-                      {inventory.map(ing => (
-                        <option key={ing._id} value={ing._id}>{ing.name} ({ing.unit})</option>
-                      ))}
-                    </select>
-                    <input 
-                      type="number" 
-                      style={{ flex: 1, background: 'var(--bg-dark)' }} 
-                      placeholder="Qty used" 
-                      step="0.01"
-                      value={r.quantity} 
-                      onChange={e => handleRecipeChange(i, 'quantity', e.target.value)}
-                    />
-                    <button type="button" onClick={() => handleRemoveRecipeItem(i)} style={{ background: 'transparent', border: 'none', color: 'var(--error)', cursor: 'pointer' }}>
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                ))}
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Inventory Unit</label>
+                  <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+                    {units.map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', padding: '1rem' }}>Save Inventory Item</button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Current Stock Level</label>
+                  <input type="number" required placeholder="12500" value={currentStock} onChange={(e) => setCurrentStock(e.target.value)} />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Unit Cost (₹)</label>
+                  <input type="number" step="any" required placeholder="0.95" value={costPerUnit} onChange={(e) => setCostPerUnit(e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Minimum Safety Level</label>
+                  <input type="number" required placeholder="1000" value={minimumStockLevel} onChange={(e) => setMinimumStockLevel(e.target.value)} />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Reorder Batch Quantity</label>
+                  <input type="number" required placeholder="5000" value={reorderQuantity} onChange={(e) => setReorderQuantity(e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Link Supplier Vendor</label>
+                  <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+                    <option value="">-- No linked supplier --</option>
+                    {suppliers.map(sup => (
+                      <option key={sup._id} value={sup._id}>{sup.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Storage Location</label>
+                  <input type="text" placeholder="Fridge Shelf A" value={storageLocation} onChange={(e) => setStorageLocation(e.target.value)} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Expiry Date (Optional)</label>
+                <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '2.6rem', marginTop: '0.5rem', justifyContent: 'center' }}>
+                Save Raw Material Specifications
+              </button>
+
             </form>
           </div>
         </div>
       )}
 
-      {/* Prepare Batch Modal */}
-      {isPrepareModalOpen && preparingItem && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass animate-slide-up" style={{ width: '400px', borderRadius: 'var(--radius-lg)', padding: '2.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Prepare Batch</h2>
-              <button onClick={() => setIsPrepareModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+      {/* RESTOCK DIALOG POPUP MODAL */}
+      {showRestockModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass" style={{
+            width: '400px',
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                Restock Material: {restockItemName}
+              </h3>
+              <button onClick={() => setShowRestockModal(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={18} /></button>
             </div>
-            
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-              Preparing {preparingItem.name} will deduct its raw ingredients from your inventory and increase this item's stock.
-            </p>
-            
-            <form onSubmit={handlePrepareBatch}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Quantity to Prepare ({preparingItem.unit})</label>
-                <input required type="number" value={prepareQuantity} onChange={e => setPrepareQuantity(e.target.value)} placeholder="e.g. 10" />
+
+            <form onSubmit={handleSaveRestock} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Replenishment Quantity</label>
+                <input type="number" required min="1" placeholder="Quantity value" value={restockQty} onChange={(e) => setRestockQty(e.target.value)} />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem' }}>Confirm & Prepare</button>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Transaction Notes Comments</label>
+                <textarea rows="3" placeholder="Restock batch order #414 intake." value={restockNotes} onChange={(e) => setRestockNotes(e.target.value)} style={{ padding: '0.5rem' }} />
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '2.6rem', marginTop: '0.5rem', justifyContent: 'center' }}>
+                replenish stock & Log transaction
+              </button>
+
             </form>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div className="glass animate-slide-up" style={{ width: '420px', borderRadius: 'var(--radius-lg)', padding: '2.5rem', background: '#ffffff', textAlign: 'center' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
-              <Trash2 size={28} color="var(--error)" />
-            </div>
-            <h2 style={{ margin: '0 0 0.75rem 0', fontSize: '1.3rem' }}>Delete Ingredient?</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: '1.5' }}>
-              Are you sure you want to delete <strong>{deleteConfirm.name}</strong>? This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="btn btn-secondary"
-                style={{ flex: 1, padding: '0.9rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteItem(deleteConfirm.id)}
-                className="btn"
-                style={{ flex: 1, padding: '0.9rem', background: 'var(--error)', color: '#fff' }}
-              >
-                <Trash2 size={16} /> Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

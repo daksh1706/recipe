@@ -5,11 +5,11 @@ import { protect, managerOrAdmin } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-  .get(getMenuItems)
-  .post(addMenuItem);
+  .get(protect, getMenuItems)
+  .post(protect, managerOrAdmin, addMenuItem);
 
 router.route('/:id')
-  .put(updateMenuItem)
-  .delete(deleteMenuItem);
+  .put(protect, managerOrAdmin, updateMenuItem)
+  .delete(protect, managerOrAdmin, deleteMenuItem);
 
 export default router;
