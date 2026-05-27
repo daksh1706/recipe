@@ -1,6 +1,100 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save } from 'lucide-react';
+import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw } from 'lucide-react';
 import { ToastContext } from '../App';
+
+// Sub-component: individual pending user approval card (needs own state for role select)
+function ApprovalCard({ u, onApprove, onReject }) {
+  const [assignedRole, setAssignedRole] = React.useState(u.role || 'cashier');
+  const registeredAt = new Date(u.created_at).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr auto',
+      gap: '1.5rem',
+      alignItems: 'center',
+      padding: '1.25rem 1.5rem',
+      borderRadius: 'var(--radius-md)',
+      border: '1px solid #f59e0b44',
+      backgroundColor: 'rgba(245,158,11,0.04)',
+      boxShadow: '0 1px 6px rgba(0,0,0,0.05)'
+    }}>
+      {/* Left: user info */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '50%',
+            background: 'rgba(245,158,11,0.15)', color: '#f59e0b',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: '800', fontSize: '1.1rem', flexShrink: 0
+          }}>
+            {(u.full_name || u.email || '?')[0].toUpperCase()}
+          </div>
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-main)' }}>
+              {u.full_name || 'Unnamed User'}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{u.email}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.15rem', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: '#f59e0b', fontWeight: '700' }}>
+            ⏰ Requested: {registeredAt}
+          </span>
+          {u.phone && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📞 {u.phone}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Right: role selector + action buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+          <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>Assign Role</label>
+          <select
+            value={assignedRole}
+            onChange={(e) => setAssignedRole(e.target.value)}
+            style={{ padding: '0.35rem 0.6rem', fontSize: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}
+          >
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="barista">Barista</option>
+            <option value="cashier">Cashier</option>
+            <option value="waiter">Waiter</option>
+          </select>
+        </div>
+
+        <button
+          onClick={() => onApprove(u.id, assignedRole)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.55rem 1.1rem',
+            background: '#10b981', color: 'white',
+            border: 'none', borderRadius: 'var(--radius-sm)',
+            fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer'
+          }}
+        >
+          ✓ Approve
+        </button>
+
+        <button
+          onClick={() => onReject(u.id)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.55rem 1.1rem',
+            background: '#ef4444', color: 'white',
+            border: 'none', borderRadius: 'var(--radius-sm)',
+            fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer'
+          }}
+        >
+          ✕ Reject
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const Settings = ({ userRole = 'admin' }) => {
   const { showToast } = useContext(ToastContext);
@@ -51,6 +145,8 @@ const Settings = ({ userRole = 'admin' }) => {
 
   // Users state
   const [users, setUsers] = useState([]);
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserForm, setNewUserForm] = useState({
     email: '',
@@ -66,10 +162,15 @@ const Settings = ({ userRole = 'admin' }) => {
   };
 
   useEffect(() => {
-    if (activeTab === 'users' && userRole === 'admin') {
-      fetchUsers();
-    }
+    if (userRole !== 'admin') return;
+    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'approvals') fetchPendingUsers();
   }, [activeTab, userRole]);
+
+  // Always load pending count for badge (runs on mount for admins)
+  useEffect(() => {
+    if (userRole === 'admin') fetchPendingUsers();
+  }, [userRole]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -90,6 +191,66 @@ const Settings = ({ userRole = 'admin' }) => {
       showToast('Network error fetching users', 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPendingUsers = async () => {
+    setPendingLoading(true);
+    try {
+      const token = getAuthToken();
+      const res = await fetch('/api/users/pending', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingUsers(data);
+      }
+    } catch (err) {
+      // silent
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleApproveUser = async (id, role = 'cashier') => {
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved', is_active: true, role })
+      });
+      if (res.ok) {
+        showToast('Access request approved! User can now log in.', 'success');
+        fetchPendingUsers();
+        fetchUsers();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Approval failed', 'error');
+      }
+    } catch (err) {
+      showToast('Error approving user', 'error');
+    }
+  };
+
+  const handleRejectUser = async (id) => {
+    if (!window.confirm('Reject this access request? The user will not be able to log in.')) return;
+    try {
+      const token = getAuthToken();
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' })
+      });
+      if (res.ok) {
+        showToast('Access request rejected.', 'warning');
+        fetchPendingUsers();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Rejection failed', 'error');
+      }
+    } catch (err) {
+      showToast('Error rejecting user', 'error');
     }
   };
 
@@ -316,6 +477,42 @@ const Settings = ({ userRole = 'admin' }) => {
                 }}
               >
                 <User size={18} /> User Accounts
+              </button>
+            )}
+
+            {userRole === 'admin' && (
+              <button 
+                onClick={() => setActiveTab('approvals')}
+                className="btn hover-brighten" 
+                style={{ 
+                  justifyContent: 'flex-start', 
+                  background: activeTab === 'approvals' ? 'var(--primary)' : 'transparent', 
+                  color: activeTab === 'approvals' ? 'white' : 'var(--text-main)', 
+                  padding: '1rem',
+                  position: 'relative'
+                }}
+              >
+                <UserCheck size={18} /> Access Requests
+                {pendingUsers.length > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    background: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '18px',
+                    height: '18px',
+                    fontSize: '0.7rem',
+                    fontWeight: '800',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1
+                  }}>
+                    {pendingUsers.length}
+                  </span>
+                )}
               </button>
             )}
 
@@ -586,6 +783,56 @@ const Settings = ({ userRole = 'admin' }) => {
                       )}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 2b. Access Approvals Panel (Admin only) */}
+          {activeTab === 'approvals' && userRole === 'admin' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <UserCheck size={20} color="var(--primary)" /> Access Requests
+                  </h2>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Review and action staff registration requests
+                  </p>
+                </div>
+                <button
+                  onClick={fetchPendingUsers}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                >
+                  <RefreshCw size={14} /> Refresh
+                </button>
+              </div>
+
+              {pendingLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {[1,2].map(i => <div key={i} className="skeleton" style={{ height: '90px', borderRadius: 'var(--radius-md)' }} />)}
+                </div>
+              ) : pendingUsers.length === 0 ? (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  padding: '4rem 2rem', textAlign: 'center',
+                  border: '2px dashed var(--border)', borderRadius: 'var(--radius-lg)'
+                }}>
+                  <UserCheck size={48} color="#10b981" style={{ marginBottom: '1rem', opacity: 0.6 }} />
+                  <h3 style={{ color: 'var(--text-main)', marginBottom: '0.5rem' }}>All Clear!</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No pending access requests right now.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {pendingUsers.map(u => (
+                    <ApprovalCard
+                      key={u.id}
+                      u={u}
+                      onApprove={handleApproveUser}
+                      onReject={handleRejectUser}
+                    />
+                  ))}
                 </div>
               )}
             </div>
