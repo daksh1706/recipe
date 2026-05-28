@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff, Share2, Copy } from 'lucide-react';
+import { Store, User, Users, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff, Share2, Copy } from 'lucide-react';
 import { ToastContext } from '../App';
 
 // Sub-component: individual pending user approval card (needs own state for role select)
@@ -104,6 +104,59 @@ const Settings = ({ userRole = 'admin', auth }) => {
   // Workspace & Sharing State
   const [workspaceInfo, setWorkspaceInfo] = useState(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [joinShareCode, setJoinShareCode] = useState('');
+  const [loadingJoin, setLoadingJoin] = useState(false);
+
+  const handleJoinWorkspace = async (e) => {
+    e.preventDefault();
+    if (!joinShareCode.trim() || joinShareCode.trim().length !== 6 || isNaN(joinShareCode)) {
+      showToast('Please enter a valid 6-digit numeric share code', 'error');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to switch workspaces? You will leave your current workspace and join the new one.')) {
+      return;
+    }
+
+    setLoadingJoin(true);
+    try {
+      const response = await fetch('/api/workspace/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ share_code: joinShareCode.trim() })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to join workspace');
+      }
+
+      showToast(`Successfully joined workspace "${data.workspace_name}"!`, 'success');
+
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        const updatedUser = { 
+          ...userInfo, 
+          workspace_id: data.id, 
+          workspace_name: data.workspace_name, 
+          workspace_role: data.role 
+        };
+        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+      }
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setLoadingJoin(false);
+    }
+  };
 
   const fetchWorkspaceInfo = async () => {
     setWorkspaceLoading(true);
@@ -999,6 +1052,60 @@ const Settings = ({ userRole = 'admin', auth }) => {
                       <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                         <h5 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.25rem' }}>Active Workspace</h5>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>You are currently connected to this workspace as a <strong>{workspaceInfo.isOwner ? 'Owner' : 'Staff Member'}</strong>.</p>
+                      </div>
+
+                      {/* Join Workspace Options */}
+                      <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <h5 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.15rem' }}>Join Workspace</h5>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                          Enter a 6-digit share code to switch to a different workspace.
+                        </p>
+                        <form onSubmit={handleJoinWorkspace} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.25rem' }}>
+                          <input 
+                            type="text" 
+                            required
+                            maxLength={6}
+                            placeholder="e.g. 123456" 
+                            value={joinShareCode}
+                            onChange={(e) => setJoinShareCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                            style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                              border: '1px solid var(--border)',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '0.5rem 0.75rem',
+                              fontSize: '1rem',
+                              textAlign: 'center',
+                              letterSpacing: '0.2em',
+                              fontWeight: 'bold',
+                              color: 'var(--primary)',
+                              width: '100%',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <button 
+                            type="submit" 
+                            disabled={loadingJoin}
+                            className="btn btn-primary"
+                            style={{
+                              width: '100%',
+                              padding: '0.6rem',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: 'var(--primary)',
+                              color: 'white',
+                              cursor: 'pointer',
+                              border: 'none',
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {loadingJoin ? 'Joining...' : 'Switch Workspace'}
+                          </button>
+                        </form>
                       </div>
 
                       {workspaceInfo.isOwner && (
