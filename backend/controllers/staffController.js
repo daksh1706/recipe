@@ -5,7 +5,8 @@ export const getStaffRoster = async (req, res) => {
   try {
     const { data: roster, error } = await supabase
       .from('staff_roster')
-      .select('*, user:users(*)');
+      .select('*, user:users(*)')
+      .eq('workspace_id', req.workspace_id);
 
     if (error) throw error;
 
@@ -49,7 +50,8 @@ export const saveStaffRoster = async (req, res) => {
     monthly_salary: Number(monthlySalary || 0),
     joining_date: joiningDate || new Date().toISOString().split('T')[0],
     emergency_contact: emergencyContact || '',
-    is_active: isActive !== false
+    is_active: isActive !== false,
+    workspace_id: req.workspace_id
   };
 
   try {
@@ -58,6 +60,7 @@ export const saveStaffRoster = async (req, res) => {
       .from('staff_roster')
       .select('id')
       .eq('user_id', userId)
+      .eq('workspace_id', req.workspace_id)
       .maybeSingle();
 
     let record, error;
@@ -67,6 +70,7 @@ export const saveStaffRoster = async (req, res) => {
         .from('staff_roster')
         .update(payload)
         .eq('user_id', userId)
+        .eq('workspace_id', req.workspace_id)
         .select()
         .single();
       record = data;
@@ -84,7 +88,7 @@ export const saveStaffRoster = async (req, res) => {
     if (error) throw error;
 
     // Update corresponding role in users table too
-    await supabase.from('users').update({ role: payload.role }).eq('id', userId);
+    await supabase.from('users').update({ role: payload.role }).eq('id', userId).eq('workspace_id', req.workspace_id);
 
     res.json({
       ...record,
@@ -105,6 +109,7 @@ export const deleteStaffRoster = async (req, res) => {
       .from('staff_roster')
       .delete()
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -126,7 +131,8 @@ export const getStaffPerformance = async (req, res) => {
     // Retrieve users
     const { data: users, error: userErr } = await supabase
       .from('users')
-      .select('id, email, full_name, role');
+      .select('id, email, full_name, role')
+      .eq('workspace_id', req.workspace_id);
 
     if (userErr) throw userErr;
 
@@ -134,6 +140,7 @@ export const getStaffPerformance = async (req, res) => {
     const { data: orders, error: ordErr } = await supabase
       .from('orders')
       .select('id, grand_total, staff_id')
+      .eq('workspace_id', req.workspace_id)
       .neq('status', 'cancelled');
 
     if (ordErr) throw ordErr;

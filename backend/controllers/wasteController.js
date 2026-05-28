@@ -7,6 +7,7 @@ export const getWasteLogs = async (req, res) => {
     let query = supabase
       .from('waste_log')
       .select('*, raw_material:raw_materials(*), recorded_user:users(*)')
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (reason) query = query.eq('reason', reason);
@@ -48,6 +49,7 @@ export const addWasteLog = async (req, res) => {
       .from('raw_materials')
       .select('current_stock, cost_per_unit, name, unit')
       .eq('id', targetMatId)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     if (matErr || !rawMaterial) {
@@ -62,7 +64,8 @@ export const addWasteLog = async (req, res) => {
     await supabase
       .from('raw_materials')
       .update({ current_stock: newStock })
-      .eq('id', targetMatId);
+      .eq('id', targetMatId)
+      .eq('workspace_id', req.workspace_id);
 
     // Create waste log record
     const { data: log, error: logErr } = await supabase
@@ -74,7 +77,8 @@ export const addWasteLog = async (req, res) => {
         reason: reason.toLowerCase(),
         estimated_loss: estLoss,
         recorded_by: req.user ? req.user.id : null,
-        notes: notes || ''
+        notes: notes || '',
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -87,7 +91,8 @@ export const addWasteLog = async (req, res) => {
       transaction_type: 'waste',
       quantity: Number(quantity),
       reference_id: log.id,
-      notes: `Waste log: ${reason.toLowerCase()}. Note: ${notes || ''}`
+      notes: `Waste log: ${reason.toLowerCase()}. Note: ${notes || ''}`,
+      workspace_id: req.workspace_id
     });
 
     if (req.io) {
@@ -118,6 +123,7 @@ export const getWasteSummary = async (req, res) => {
     const { data: logs, error } = await supabase
       .from('waste_log')
       .select('*')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonth.toISOString());
 
     if (error) throw error;

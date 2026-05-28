@@ -16,6 +16,7 @@ import Feedback from './pages/Feedback';
 import Settings from './pages/Settings';
 import ActiveOrders from './pages/ActiveOrders';
 import AuthPage from './pages/AuthPage';
+import WorkspaceSelector from './pages/WorkspaceSelector';
 import Sidebar from './components/Sidebar';
 import { ShieldAlert, Info } from 'lucide-react';
 
@@ -102,11 +103,75 @@ function AppInner() {
     }
   }, [toast]);
 
+  // Sync latest user workspace details from backend on load
+  useEffect(() => {
+    if (auth && auth.token) {
+      const syncProfile = async () => {
+        try {
+          const response = await fetch('/api/auth/me');
+          if (response.status === 401) {
+            handleLogout();
+            return;
+          }
+          if (response.ok) {
+            const latestUser = await response.json();
+            // Sync if workspace_id has changed
+            if (latestUser.workspace_id !== auth.workspace_id) {
+              const updated = { 
+                ...auth, 
+                workspace_id: latestUser.workspace_id,
+                role: latestUser.role,
+                full_name: latestUser.full_name
+              };
+              localStorage.setItem('userInfo', JSON.stringify(updated));
+              setAuth(updated);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to sync profile workspace status:", error);
+        }
+      };
+      syncProfile();
+    }
+  }, [auth?.token]);
+
   // Auth logout helper
   const handleLogout = useCallback(() => {
     localStorage.removeItem('userInfo');
     setAuth(null);
   }, []);
+
+  if (auth && !auth.workspace_id) {
+    return (
+      <ToastContext.Provider value={{ showToast }}>
+        <ThemeContext.Provider value={{ darkMode, toggleTheme }}>
+          <WorkspaceSelector auth={auth} setAuth={setAuth} handleLogout={handleLogout} />
+          {toast && (
+            <div className="animate-slide-up" style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              padding: '1rem 1.5rem',
+              borderRadius: 'var(--radius-md)',
+              color: 'white',
+              backgroundColor: toast.type === 'success' ? '#8C6239' : (toast.type === 'error' ? '#d9534f' : '#f0ad4e'),
+              boxShadow: 'var(--shadow-lg)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              fontWeight: '600',
+              borderLeft: '5px solid rgba(255,255,255,0.4)',
+              fontSize: '0.95rem'
+            }}>
+              <Info size={18} />
+              <span>{toast.message}</span>
+            </div>
+          )}
+        </ThemeContext.Provider>
+      </ToastContext.Provider>
+    );
+  }
 
   if (!auth) {
     return (
@@ -238,7 +303,7 @@ function AppInner() {
 
                 {/* Configuration Settings (Module 15): admin, manager */}
                 <Route path="/settings" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<Settings userRole={userRole} />} />
+                  <GuardRoute allowed={['admin', 'manager']} element={<Settings userRole={userRole} auth={auth} />} />
                 } />
 
                 <Route path="*" element={<Navigate to="/" replace />} />

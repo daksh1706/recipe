@@ -14,6 +14,7 @@ export const getMenuItems = async (req, res) => {
           )
         )
       `)
+      .eq('workspace_id', req.workspace_id)
       .order('name');
 
     if (error) throw error;
@@ -84,7 +85,8 @@ export const addMenuItem = async (req, res) => {
         price: Number(price),
         gst_percent: Number(finalGst),
         is_available: finalAvailable,
-        image_url: finalImage
+        image_url: finalImage,
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -100,7 +102,8 @@ export const addMenuItem = async (req, res) => {
           menu_item_id: item.id,
           serving_size: recipe.servingSize || recipe.serving_size || 'Regular',
           prep_time_minutes: Number(recipe.prepTimeMinutes || recipe.prep_time_minutes || 5),
-          instructions: recipe.instructions || ''
+          instructions: recipe.instructions || '',
+          workspace_id: req.workspace_id
         })
         .select()
         .single();
@@ -173,6 +176,7 @@ export const updateMenuItem = async (req, res) => {
       .from('menu_items')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -185,6 +189,7 @@ export const updateMenuItem = async (req, res) => {
         .from('recipes')
         .select('id')
         .eq('menu_item_id', id)
+        .eq('workspace_id', req.workspace_id)
         .maybeSingle();
 
       let recipeId;
@@ -205,7 +210,8 @@ export const updateMenuItem = async (req, res) => {
             menu_item_id: id,
             serving_size: recipe.servingSize || recipe.serving_size || 'Regular',
             prep_time_minutes: Number(recipe.prepTimeMinutes || recipe.prep_time_minutes || 5),
-            instructions: recipe.instructions || ''
+            instructions: recipe.instructions || '',
+            workspace_id: req.workspace_id
           })
           .select()
           .single();
@@ -259,6 +265,7 @@ export const deleteMenuItem = async (req, res) => {
       .from('menu_items')
       .delete()
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 

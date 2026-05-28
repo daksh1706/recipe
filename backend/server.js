@@ -39,20 +39,28 @@ import staffRoutes from './routes/staffRoutes.js';
 import wasteRoutes from './routes/wasteRoutes.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import workspaceRoutes from './routes/workspaceRoutes.js';
+
+// Import session middlewares
+import { protect } from './middleware/authMiddleware.js';
+import { workspaceProtect } from './middleware/workspaceMiddleware.js';
 
 // Map API endpoints
 app.use('/api/auth', authRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/menu', menuRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/suppliers', supplierRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/staff', staffRoutes);
-app.use('/api/waste', wasteRoutes);
-app.use('/api/feedback', feedbackRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/workspace', workspaceRoutes);
+
+// Apply auth session + multi-tenant isolation guard to all administrative data modules
+app.use('/api/inventory', protect, workspaceProtect, inventoryRoutes);
+app.use('/api/menu', protect, workspaceProtect, menuRoutes);
+app.use('/api/orders', protect, workspaceProtect, orderRoutes);
+app.use('/api/customers', protect, workspaceProtect, customerRoutes);
+app.use('/api/users', protect, workspaceProtect, userRoutes);
+app.use('/api/suppliers', protect, workspaceProtect, supplierRoutes);
+app.use('/api/expenses', protect, workspaceProtect, expenseRoutes);
+app.use('/api/staff', protect, workspaceProtect, staffRoutes);
+app.use('/api/waste', protect, workspaceProtect, wasteRoutes);
+app.use('/api/feedback', protect, workspaceProtect, feedbackRoutes);
+app.use('/api/reports', protect, workspaceProtect, reportRoutes);
 
 // Socket.io handlers
 io.on('connection', (socket) => {

@@ -348,6 +348,29 @@ table td {
   animation: slideInUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+
+/* Large Save Button styling */
+.btn-save-large {
+  height: 52px !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  width: 100% !important;
+  border-radius: var(--radius-md) !important;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-save-large:hover {
+  transform: scale(1.015) translateY(-1px) !important;
+  box-shadow: 0 6px 15px rgba(140, 98, 57, 0.3) !important;
+}
+
+.btn-save-large:active {
+  transform: scale(0.985) !important;
+}
+
 /* Mobile Responsiveness */
 .mobile-bottom-nav {
   display: none;

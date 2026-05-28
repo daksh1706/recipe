@@ -7,6 +7,7 @@ export const getExpenses = async (req, res) => {
     let query = supabase
       .from('expenses')
       .select('*, recorded_user:users(*)')
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (category) query = query.eq('category', category);
@@ -42,6 +43,7 @@ export const getExpenseSummary = async (req, res) => {
     const { data: expenses, error } = await supabase
       .from('expenses')
       .select('*')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonth.toISOString());
 
     if (error) throw error;
@@ -92,7 +94,8 @@ export const addExpense = async (req, res) => {
         paid_to: paidTo || paid_to || '',
         receipt_url: receiptUrl || receipt_url || '',
         notes: notes || '',
-        recorded_by: req.user ? req.user.id : null
+        recorded_by: req.user ? req.user.id : null,
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -138,6 +141,7 @@ export const updateExpense = async (req, res) => {
       .from('expenses')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -164,6 +168,7 @@ export const deleteExpense = async (req, res) => {
       .from('expenses')
       .delete()
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 

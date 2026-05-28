@@ -57,6 +57,7 @@ export const registerUser = async (req, res) => {
         full_name: user.full_name,
         role: user.role,
         status: user.status,
+        workspace_id: user.workspace_id || null,
         token: generateToken(user.id, user.role),
       });
     } else {
@@ -114,6 +115,7 @@ export const loginUser = async (req, res) => {
       full_name: user.full_name,
       role: user.role,
       status: user.status,
+      workspace_id: user.workspace_id || null,
       token: generateToken(user.id, user.role),
     });
   } catch (error) {
@@ -125,7 +127,7 @@ export const getMe = async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, full_name, role, phone, is_active, status, created_at')
+      .select('id, email, full_name, role, phone, is_active, status, workspace_id, created_at')
       .eq('id', req.user.id)
       .single();
 

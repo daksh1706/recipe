@@ -15,6 +15,7 @@ export const getDashboardKPIs = async (req, res) => {
     const { data: todayOrders, error: ordErr } = await supabase
       .from('orders')
       .select('grand_total, status')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfToday)
       .lt('created_at', endOfToday)
       .neq('status', 'cancelled');
@@ -28,6 +29,7 @@ export const getDashboardKPIs = async (req, res) => {
     const { count: pendingCount, error: pendErr } = await supabase
       .from('orders')
       .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', req.workspace_id)
       .in('status', ['pending', 'preparing', 'ready']);
 
     if (pendErr) throw pendErr;
@@ -35,7 +37,8 @@ export const getDashboardKPIs = async (req, res) => {
     // 3. Low stock alerts
     const { data: materials, error: matErr } = await supabase
       .from('raw_materials')
-      .select('id, current_stock, minimum_stock_level');
+      .select('id, current_stock, minimum_stock_level')
+      .eq('workspace_id', req.workspace_id);
 
     if (matErr) throw matErr;
 
@@ -44,7 +47,8 @@ export const getDashboardKPIs = async (req, res) => {
     // 4. Total Customers
     const { count: customerCount, error: custErr } = await supabase
       .from('customers')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', req.workspace_id);
 
     if (custErr) throw custErr;
 
@@ -58,6 +62,7 @@ export const getDashboardKPIs = async (req, res) => {
     const { data: monthOrders, error: mOrdErr } = await supabase
       .from('orders')
       .select('subtotal, discount_amount, grand_total')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonStr)
       .neq('status', 'cancelled');
 
@@ -67,6 +72,7 @@ export const getDashboardKPIs = async (req, res) => {
     const { data: monthExpenses, error: mExpErr } = await supabase
       .from('expenses')
       .select('amount')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonStr);
 
     if (mExpErr) throw mExpErr;
@@ -100,6 +106,7 @@ export const getDashboardCharts = async (req, res) => {
     const { data: monthOrders, error: mOrdErr } = await supabase
       .from('orders')
       .select('grand_total, created_at')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonth.toISOString())
       .neq('status', 'cancelled');
 
@@ -132,6 +139,7 @@ export const getDashboardCharts = async (req, res) => {
     const { data: orderItems, error: oiErr } = await supabase
       .from('order_items')
       .select('quantity, subtotal, menu_items(name)')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfWeek.toISOString());
 
     if (oiErr) throw oiErr;
@@ -153,6 +161,7 @@ export const getDashboardCharts = async (req, res) => {
     const { data: catOrders, error: catErr } = await supabase
       .from('order_items')
       .select('quantity, subtotal, menu_items(category)')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonth.toISOString());
 
     if (catErr) throw catErr;
@@ -181,6 +190,7 @@ export const getDashboardCharts = async (req, res) => {
     const { data: expenses, error: expErr } = await supabase
       .from('expenses')
       .select('category, amount')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMonth.toISOString());
 
     if (expErr) throw expErr;
@@ -219,6 +229,7 @@ export const getMonthlyReports = async (req, res) => {
     const { data: orders, error: ordErr } = await supabase
       .from('orders')
       .select('subtotal, discount_amount, gst_amount, grand_total, created_at')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfYear)
       .lte('created_at', endOfYear)
       .neq('status', 'cancelled');
@@ -229,6 +240,7 @@ export const getMonthlyReports = async (req, res) => {
     const { data: expenses, error: expErr } = await supabase
       .from('expenses')
       .select('amount, created_at')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfYear)
       .lte('created_at', endOfYear);
 
@@ -294,6 +306,7 @@ export const getDailyReport = async (req, res) => {
     const { data: orders, error } = await supabase
       .from('orders')
       .select('grand_total, subtotal, discount_amount, gst_amount, created_at')
+      .eq('workspace_id', req.workspace_id)
       .gte('created_at', startOfMon)
       .lte('created_at', endOfMon)
       .neq('status', 'cancelled');

@@ -6,6 +6,7 @@ export const getAllCustomers = async (req, res) => {
     const { data: customers, error } = await supabase
       .from('customers')
       .select('*')
+      .eq('workspace_id', req.workspace_id)
       .order('total_spent', { ascending: false });
 
     if (error) throw error;
@@ -35,6 +36,7 @@ export const getCustomerProfile = async (req, res) => {
       .from('customers')
       .select('*')
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     if (error) {
@@ -46,6 +48,7 @@ export const getCustomerProfile = async (req, res) => {
       .from('orders')
       .select('*, order_items(*, menu_items(*))')
       .eq('customer_id', id)
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (ordErr) throw ordErr;
@@ -55,6 +58,7 @@ export const getCustomerProfile = async (req, res) => {
       .from('feedback')
       .select('*, menu_items(*)')
       .eq('customer_id', id)
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (feedErr) throw feedErr;
@@ -121,6 +125,7 @@ export const getCustomerByPhone = async (req, res) => {
       .from('customers')
       .select('*')
       .eq('phone', phone)
+      .eq('workspace_id', req.workspace_id)
       .maybeSingle();
 
     if (error) throw error;
@@ -154,7 +159,8 @@ export const addCustomer = async (req, res) => {
         total_visits: 0,
         total_spent: 0.0,
         first_visit_date: new Date().toISOString().split('T')[0],
-        last_visit_date: new Date().toISOString().split('T')[0]
+        last_visit_date: new Date().toISOString().split('T')[0],
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -195,6 +201,7 @@ export const updateCustomer = async (req, res) => {
       .from('customers')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -226,6 +233,7 @@ export const deleteCustomer = async (req, res) => {
       .from('customers')
       .delete()
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 

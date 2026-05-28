@@ -1,11 +1,12 @@
 import { supabase } from '../config/supabase.js';
 
 // Helper to generate ORD-0001, ORD-0002 format
-const generateOrderCode = async () => {
+const generateOrderCode = async (workspaceId) => {
   try {
     const { count, error } = await supabase
       .from('orders')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId);
 
     if (error) throw error;
 
@@ -120,6 +121,7 @@ export const createOrder = async (req, res) => {
         .from('menu_items')
         .select('*, recipes(*, recipe_ingredients(*, raw_materials(*))))')
         .eq('id', item.menuItemId || item.menu_item_id)
+        .eq('workspace_id', req.workspace_id)
         .single();
 
       if (menuErr || !menuItem) {
@@ -172,6 +174,7 @@ export const createOrder = async (req, res) => {
         .from('customers')
         .select('*')
         .eq('phone', finalPhone)
+        .eq('workspace_id', req.workspace_id)
         .maybeSingle();
 
       if (existingCustomer) {
@@ -184,6 +187,7 @@ export const createOrder = async (req, res) => {
             last_visit_date: new Date().toISOString().split('T')[0]
           })
           .eq('id', existingCustomer.id)
+          .eq('workspace_id', req.workspace_id)
           .select()
           .single();
         
@@ -199,7 +203,8 @@ export const createOrder = async (req, res) => {
             total_visits: 1,
             total_spent: grandTotal,
             first_visit_date: new Date().toISOString().split('T')[0],
-            last_visit_date: new Date().toISOString().split('T')[0]
+            last_visit_date: new Date().toISOString().split('T')[0],
+            workspace_id: req.workspace_id
           })
           .select()
           .single();
@@ -211,7 +216,7 @@ export const createOrder = async (req, res) => {
     }
 
     // Generate Order Code
-    const orderCode = await generateOrderCode();
+    const orderCode = await generateOrderCode(req.workspace_id);
 
     // Create Order Record
     const { data: order, error: orderErr } = await supabase
@@ -232,24 +237,25 @@ export const createOrder = async (req, res) => {
         amount_received: finalAmountReceived,
         change_to_return: changeToReturn,
         staff_id: req.user ? req.user.id : null,
-        notes: notes || ''
+        notes: notes || '',
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
 
     if (orderErr) throw orderErr;
 
-    // Create Order Items
-    const itemsInserts = processedItems.map(pi => ({
-      order_id: order.id,
-      menu_item_id: pi.menu_item_id,
-      quantity: pi.quantity,
-      unit_price: pi.unit_price,
-      subtotal: pi.subtotal,
-      customizations: pi.customizations && pi.customizations.length > 0 ? JSON.stringify(pi.customizations) : '[]'
-    }));
-
-    const { error: itemsErr } = await supabase.from('order_items').insert(itemsInserts);
+    const { error: itemsErr } = await supabase.from('order_items').insert(
+      processedItems.map(pi => ({
+        order_id: order.id,
+        menu_item_id: pi.menu_item_id,
+        quantity: pi.quantity,
+        unit_price: pi.unit_price,
+        subtotal: pi.subtotal,
+        customizations: pi.customizations && pi.customizations.length > 0 ? JSON.stringify(pi.customizations) : '[]',
+        workspace_id: req.workspace_id
+      }))
+    );
     if (itemsErr) throw itemsErr;
 
     // Deduct stock from raw materials and log transaction
@@ -260,7 +266,8 @@ export const createOrder = async (req, res) => {
       await supabase
         .from('raw_materials')
         .update({ current_stock: newStock })
-        .eq('id', ded.raw_material_id);
+        .eq('id', ded.raw_material_id)
+        .eq('workspace_id', req.workspace_id);
 
       // Log stock transaction
       await supabase.from('stock_transactions').insert({
@@ -268,7 +275,8 @@ export const createOrder = async (req, res) => {
         transaction_type: 'deduction',
         quantity: ded.quantity,
         reference_id: order.id,
-        notes: `POS order ${orderCode} sales deduction`
+        notes: `POS order ${orderCode} sales deduction`,
+        workspace_id: req.workspace_id
       });
 
       // Emit real time socket notifications if stock is low
@@ -285,6 +293,7 @@ export const createOrder = async (req, res) => {
       .from('orders')
       .select('*, customer:customers(*), staff:users(*), order_items(*, menu_items(*))')
       .eq('id', order.id)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     const responseOrder = {
@@ -338,6 +347,7 @@ export const getOrders = async (req, res) => {
     let query = supabase
       .from('orders')
       .select('*, customer:customers(*), staff:users(*), order_items(*, menu_items(*))')
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     // Apply filters
@@ -409,6 +419,7 @@ export const updateOrderStatus = async (req, res) => {
       .from('orders')
       .select('status, order_code')
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     if (oldErr || !oldOrder) {
@@ -419,6 +430,7 @@ export const updateOrderStatus = async (req, res) => {
       .from('orders')
       .update({ status: status.toLowerCase(), updated_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select('*, customer:customers(*), staff:users(*), order_items(*, menu_items(*))')
       .single();
 
@@ -434,6 +446,7 @@ export const updateOrderStatus = async (req, res) => {
           .from('menu_items')
           .select('*, recipes(*, recipe_ingredients(*, raw_materials(*))))')
           .eq('id', item.menu_item_id)
+          .eq('workspace_id', req.workspace_id)
           .single();
 
         if (menuItem && menuItem.recipes && menuItem.recipes.length > 0) {
@@ -450,7 +463,8 @@ export const updateOrderStatus = async (req, res) => {
                 await supabase
                   .from('raw_materials')
                   .update({ current_stock: restoredStock })
-                  .eq('id', ri.raw_material_id);
+                  .eq('id', ri.raw_material_id)
+                  .eq('workspace_id', req.workspace_id);
 
                 // Log cancellation restock transaction
                 await supabase.from('stock_transactions').insert({
@@ -458,7 +472,8 @@ export const updateOrderStatus = async (req, res) => {
                   transaction_type: 'restock',
                   quantity: totalRestore,
                   reference_id: id,
-                  notes: `Restored from cancelled POS order ${oldOrder.order_code}`
+                  notes: `Restored from cancelled POS order ${oldOrder.order_code}`,
+                  workspace_id: req.workspace_id
                 });
 
                 if (req.io) {
@@ -519,6 +534,7 @@ export const confirmPayment = async (req, res) => {
       .from('orders')
       .select('*, customer:customers(*), order_items(*, menu_items(*))')
       .eq('id', order_id)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     if (error || !order) {

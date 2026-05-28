@@ -6,6 +6,7 @@ export const getRawMaterials = async (req, res) => {
     const { data: materials, error } = await supabase
       .from('raw_materials')
       .select('*, supplier:suppliers(*)')
+      .eq('workspace_id', req.workspace_id)
       .order('name');
 
     if (error) throw error;
@@ -81,7 +82,8 @@ export const addRawMaterial = async (req, res) => {
         expiry_date: finalExpiry,
         quantity_per_pack: finalQtyPack ? Number(finalQtyPack) : null,
         pack_capacity_unit: finalPackCapUnit,
-        last_restocked_at: new Date().toISOString()
+        last_restocked_at: new Date().toISOString(),
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -94,7 +96,8 @@ export const addRawMaterial = async (req, res) => {
         raw_material_id: mat.id,
         transaction_type: 'restock',
         quantity: Number(finalStock),
-        notes: 'Initial stock intake on creation'
+        notes: 'Initial stock intake on creation',
+        workspace_id: req.workspace_id
       });
     }
 
@@ -168,6 +171,7 @@ export const updateRawMaterial = async (req, res) => {
       .from('raw_materials')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -206,6 +210,7 @@ export const deleteRawMaterial = async (req, res) => {
       .from('raw_materials')
       .delete()
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -241,6 +246,7 @@ export const restockRawMaterial = async (req, res) => {
       .from('raw_materials')
       .select('current_stock, cost_per_unit, reorder_quantity, name, unit, quantity_per_pack, pack_capacity_unit')
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     if (fetchErr || !currentMat) {
@@ -273,6 +279,7 @@ export const restockRawMaterial = async (req, res) => {
       .from('raw_materials')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -283,7 +290,8 @@ export const restockRawMaterial = async (req, res) => {
       raw_material_id: id,
       transaction_type: 'restock',
       quantity: finalQty,
-      notes: notes || `Manual restock intake. Total Cost: ₹${finalTotalCost || 'N/A'}`
+      notes: notes || `Manual restock intake. Total Cost: ₹${finalTotalCost || 'N/A'}`,
+      workspace_id: req.workspace_id
     });
 
     const responseItem = {
@@ -317,6 +325,7 @@ export const getStockTransactions = async (req, res) => {
     const { data: txs, error } = await supabase
       .from('stock_transactions')
       .select('*, raw_material:raw_materials(*)')
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;

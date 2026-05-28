@@ -718,9 +718,15 @@ const InventoryDashboard = ({ userRole }) => {
                 </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Minimum Safety Level</label>
-                <input type="number" required placeholder="e.g. 2" value={minimumStockLevel} onChange={(e) => setMinimumStockLevel(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Minimum Safety Level</label>
+                  <input type="number" required placeholder="e.g. 2" value={minimumStockLevel} onChange={(e) => setMinimumStockLevel(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Expiry Date (Optional)</label>
+                  <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
@@ -740,12 +746,7 @@ const InventoryDashboard = ({ userRole }) => {
                 </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Expiry Date (Optional)</label>
-                <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
-              </div>
-
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '2.6rem', marginTop: '0.5rem', justifyContent: 'center' }}>
+              <button type="submit" className="btn btn-primary btn-save-large" style={{ marginTop: '0.5rem' }}>
                 Save Raw Material Specifications
               </button>
 

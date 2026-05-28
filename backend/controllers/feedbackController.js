@@ -7,6 +7,7 @@ export const getFeedback = async (req, res) => {
     let query = supabase
       .from('feedback')
       .select('*, customer:customers(*), order:orders(*), menu_item:menu_items(*)')
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (rating) query = query.eq('rating', Number(rating));
@@ -52,7 +53,8 @@ export const addFeedback = async (req, res) => {
         rating: Number(rating),
         comment: comment || '',
         is_resolved: false,
-        action_taken: ''
+        action_taken: '',
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -85,6 +87,7 @@ export const resolveFeedback = async (req, res) => {
         action_taken: actionTaken
       })
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -105,7 +108,8 @@ export const getFeedbackSummary = async (req, res) => {
   try {
     const { data: feedback, error } = await supabase
       .from('feedback')
-      .select('rating');
+      .select('rating')
+      .eq('workspace_id', req.workspace_id);
 
     if (error) throw error;
 

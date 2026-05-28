@@ -5,6 +5,7 @@ export const getSuppliers = async (req, res) => {
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
+      .eq('workspace_id', req.workspace_id)
       .order('name');
 
     if (error) throw error;
@@ -32,6 +33,7 @@ export const getSupplierById = async (req, res) => {
       .from('suppliers')
       .select('*')
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .single();
 
     if (error) throw error;
@@ -40,7 +42,8 @@ export const getSupplierById = async (req, res) => {
     const { data: rawMaterials, error: matErr } = await supabase
       .from('raw_materials')
       .select('*')
-      .eq('supplier_id', id);
+      .eq('supplier_id', id)
+      .eq('workspace_id', req.workspace_id);
 
     if (matErr) throw matErr;
 
@@ -83,7 +86,8 @@ export const addSupplier = async (req, res) => {
         payment_terms: paymentTerms || payment_terms || '',
         delivery_days: deliveryDays || delivery_days || '',
         minimum_order_quantity: Number(minimumOrderQuantity || minimum_order_quantity || 0),
-        notes: notes || ''
+        notes: notes || '',
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
@@ -138,6 +142,7 @@ export const updateSupplier = async (req, res) => {
       .from('suppliers')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 
@@ -166,6 +171,7 @@ export const deleteSupplier = async (req, res) => {
       .from('suppliers')
       .delete()
       .eq('id', id)
+      .eq('workspace_id', req.workspace_id)
       .select()
       .single();
 

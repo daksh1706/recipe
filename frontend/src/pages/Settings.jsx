@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Store, User, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff, Share2, Copy } from 'lucide-react';
 import { ToastContext } from '../App';
 
 // Sub-component: individual pending user approval card (needs own state for role select)
@@ -96,10 +96,88 @@ function ApprovalCard({ u, onApprove, onReject }) {
   );
 }
 
-const Settings = ({ userRole = 'admin' }) => {
+const Settings = ({ userRole = 'admin', auth }) => {
   const { showToast } = useContext(ToastContext);
   const [activeTab, setActiveTab] = useState('store');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Workspace & Sharing State
+  const [workspaceInfo, setWorkspaceInfo] = useState(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+
+  const fetchWorkspaceInfo = async () => {
+    setWorkspaceLoading(true);
+    try {
+      const res = await fetch('/api/workspace/info');
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspaceInfo(data);
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Failed to fetch workspace info', 'error');
+      }
+    } catch (error) {
+      showToast(error.message || 'Network error fetching workspace info', 'error');
+    } finally {
+      setWorkspaceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'workspace') {
+      fetchWorkspaceInfo();
+    }
+  }, [activeTab]);
+
+  const handleCopyCode = (code) => {
+    navigator.clipboard.writeText(code);
+    showToast('Invitation code copied to clipboard!', 'success');
+  };
+
+  const handleWhatsAppShare = (code, name) => {
+    const text = encodeURIComponent(`Hey! Join my CRFTD Coffee Shop workspace "${name}" using this 6-digit invitation code: ${code}. Get started here!`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  const handleRegenerateCode = async () => {
+    if (!window.confirm('Are you sure you want to regenerate the share invitation code? The old code will become invalid immediately!')) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/workspace/regenerate-code', {
+        method: 'PUT'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Share code regenerated successfully!', 'success');
+        setWorkspaceInfo(prev => ({ ...prev, shareCode: data.shareCode }));
+      } else {
+        showToast(data.message || 'Failed to regenerate code', 'error');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  };
+
+  const handleRemoveMember = async (memberId, memberName) => {
+    if (!window.confirm(`Are you sure you want to remove "${memberName}" from this workspace? They will be kicked and forced to select/join a workspace.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/workspace/members/${memberId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Member removed successfully', 'success');
+        fetchWorkspaceInfo();
+      } else {
+        showToast(data.message || 'Failed to remove member', 'error');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  };
 
   // Store details state
   const [storeDetails, setStoreDetails] = useState(() => {
@@ -504,6 +582,19 @@ const Settings = ({ userRole = 'admin' }) => {
               <Store size={18} /> Store Details
             </button>
 
+            <button 
+              onClick={() => setActiveTab('workspace')}
+              className="btn hover-brighten" 
+              style={{ 
+                justifyContent: 'flex-start', 
+                background: activeTab === 'workspace' ? 'var(--primary)' : 'transparent', 
+                color: activeTab === 'workspace' ? 'white' : 'var(--text-main)', 
+                padding: '1rem' 
+              }}
+            >
+              <Share2 size={18} /> Workspace & Sharing
+            </button>
+
             {userRole === 'admin' && (
               <button 
                 onClick={() => setActiveTab('users')}
@@ -799,6 +890,214 @@ const Settings = ({ userRole = 'admin' }) => {
                   </form>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Workspace & Sharing Settings */}
+          {activeTab === 'workspace' && (
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Share2 size={24} style={{ color: 'var(--primary)' }} /> Workspace & Sharing
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                    Manage store properties, invite cashiers and managers, and track workspace access controls.
+                  </p>
+                </div>
+                <button onClick={fetchWorkspaceInfo} disabled={workspaceLoading} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <RefreshCw size={14} className={workspaceLoading ? 'animate-spin' : ''} /> Refresh
+                </button>
+              </div>
+
+              {workspaceLoading && !workspaceInfo ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '250px', gap: '1rem' }}>
+                  <RefreshCw size={32} className="animate-spin" style={{ color: 'var(--primary)' }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading workspace profiles...</p>
+                </div>
+              ) : workspaceInfo ? (
+                <>
+                  {/* Share Box & Info Cards Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '2rem' }}>
+                    
+                    {/* Share Invitation Code Styled Box */}
+                    <div className="glass" style={{
+                      borderRadius: 'var(--radius-md)',
+                      background: 'linear-gradient(135deg, #ffffff 0%, rgba(140, 98, 57, 0.03) 100%)',
+                      padding: '2rem',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1.5rem',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      
+                      <div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em' }}>STORE SEGMENT</span>
+                        <h4 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.25rem' }}>{workspaceInfo.name}</h4>
+                      </div>
+
+                      {workspaceInfo.isOwner ? (
+                        <div>
+                          <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>6-DIGIT WORKSPACE INVITATION CODE</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                            <div style={{
+                              fontSize: '2rem',
+                              fontWeight: 900,
+                              color: 'var(--primary)',
+                              backgroundColor: 'rgba(140, 98, 57, 0.08)',
+                              padding: '0.5rem 2rem',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1.5px dashed var(--primary)',
+                              letterSpacing: '0.15em',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: 'var(--shadow-sm)'
+                            }}>
+                              {workspaceInfo.shareCode}
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button onClick={() => handleCopyCode(workspaceInfo.shareCode)} className="btn btn-secondary" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }} title="Copy Code to Clipboard">
+                                <Copy size={16} /> Copy
+                              </button>
+                              
+                              <button onClick={() => handleWhatsAppShare(workspaceInfo.shareCode, workspaceInfo.name)} className="btn" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', backgroundColor: '#25D366', color: 'white', border: 'none' }} title="Share via WhatsApp">
+                                <svg size={16} viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.595-1.013-5.035-2.855-6.882-1.843-1.848-4.293-2.865-6.887-2.865-5.448 0-9.873 4.37-9.876 9.732-.001 1.765.485 3.49 1.408 5.013l-.995 3.637 3.737-.981zm12.39-6.236c-.3-.15-1.77-.875-2.04-.975-.27-.1-.47-.15-.67.15-.2.3-.77.975-.94 1.175-.17.2-.35.225-.65.075-.3-.15-1.265-.467-2.41-1.485-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.67-1.625-.92-2.225-.244-.589-.48-.51-.67-.52l-.57-.01c-.2 0-.52.075-.79.375-.27.3-1.04 1.02-1.04 2.487s1.07 2.87 1.22 3.075c.15.2 2.11 3.22 5.11 4.52.714.31 1.27.496 1.703.635.717.227 1.368.195 1.883.118.574-.085 1.77-.725 2.02-1.39.25-.665.25-1.235.175-1.39-.075-.155-.275-.255-.575-.405z"/></svg> WhatsApp
+                              </button>
+                            </div>
+                          </div>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.75rem', lineHeight: '1.4' }}>
+                            Give this 6-digit invitation code to other team members. Once they enter this code during signup, they will automatically join this workspace and see the exact same POS menu, ledger, and staff reports.
+                          </p>
+                        </div>
+                      ) : (
+                        <div style={{
+                          padding: '1rem',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'rgba(140, 98, 57, 0.05)',
+                          border: '1px solid var(--border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          color: 'var(--primary)',
+                          fontSize: '0.85rem',
+                          fontWeight: '700'
+                        }}>
+                          <Users size={16} /> Only the workspace owner has permission to view or regenerate invitation codes.
+                        </div>
+                      )}
+                      
+                    </div>
+
+                    {/* Meta Action Cards */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                        <h5 style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.25rem' }}>Active Workspace</h5>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>You are currently connected to this workspace as a <strong>{workspaceInfo.isOwner ? 'Owner' : 'Staff Member'}</strong>.</p>
+                      </div>
+
+                      {workspaceInfo.isOwner && (
+                        <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid #f59e0b22', backgroundColor: 'rgba(245,158,11,0.03)' }}>
+                          <h5 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#f59e0b', marginBottom: '0.25rem' }}>Danger Zone</h5>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Invalidate old code and generate a new one.</p>
+                          <button onClick={handleRegenerateCode} className="btn" style={{
+                            padding: '0.6rem 1rem',
+                            fontSize: '0.8rem',
+                            fontWeight: 'bold',
+                            border: '1px solid #f59e0b',
+                            background: 'transparent',
+                            color: '#f59e0b',
+                            cursor: 'pointer',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            <RefreshCw size={14} /> Regenerate Code
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* Members List Section */}
+                  <div style={{ marginTop: '1rem' }}>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '1rem' }}>Workspace Members ({workspaceInfo.members.length})</h4>
+                    
+                    <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'rgba(140, 98, 57, 0.03)', borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ padding: '1rem', fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)' }}>Name</th>
+                            <th style={{ padding: '1rem', fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)' }}>Email</th>
+                            <th style={{ padding: '1rem', fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)' }}>Role</th>
+                            <th style={{ padding: '1rem', fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)' }}>Joined At</th>
+                            {workspaceInfo.isOwner && (
+                              <th style={{ padding: '1rem', fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', textAlign: 'right' }}>Actions</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {workspaceInfo.members.map(m => (
+                            <tr key={m.userId} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }} className="hover-brighten">
+                              <td style={{ padding: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                                {m.name} {auth && m.userId === auth._id && <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(140,98,57,0.15)', color: 'var(--primary)', padding: '0.15rem 0.4rem', borderRadius: '4px', marginLeft: '0.5rem', fontWeight: '800' }}>YOU</span>}
+                              </td>
+                              <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{m.email}</td>
+                              <td style={{ padding: '1rem' }}>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: '800',
+                                  textTransform: 'uppercase',
+                                  padding: '0.15rem 0.5rem',
+                                  borderRadius: '30px',
+                                  backgroundColor: m.role === 'owner' ? 'rgba(140, 98, 57, 0.15)' : 'rgba(100, 100, 100, 0.1)',
+                                  color: m.role === 'owner' ? 'var(--primary)' : 'var(--text-muted)'
+                                }}>
+                                  {m.role}
+                                </span>
+                              </td>
+                              <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                                {new Date(m.joinedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </td>
+                              {workspaceInfo.isOwner && (
+                                <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                  {auth && m.userId !== auth._id ? (
+                                    <button onClick={() => handleRemoveMember(m.userId, m.name)} className="btn" style={{
+                                      padding: '0.35rem 0.75rem',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 'bold',
+                                      color: '#d9534f',
+                                      border: '1px solid #d9534f',
+                                      background: 'transparent',
+                                      cursor: 'pointer',
+                                      borderRadius: 'var(--radius-sm)',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.3rem'
+                                    }}>
+                                      <Trash2 size={12} /> Remove
+                                    </button>
+                                  ) : (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Owner</span>
+                                  )}
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : null}
+
             </div>
           )}
 

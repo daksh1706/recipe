@@ -7,6 +7,7 @@ export const getAllUsers = async (req, res) => {
     const { data, error } = await supabase
       .from('users')
       .select('id, email, full_name, role, phone, status, is_active, created_at')
+      .eq('workspace_id', req.workspace_id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -161,12 +162,20 @@ export const adminCreateUser = async (req, res) => {
         role: role.toLowerCase(),
         phone: phone || '',
         status: 'approved',
-        is_active: true
+        is_active: true,
+        workspace_id: req.workspace_id
       })
       .select()
       .single();
 
     if (error) throw error;
+
+    // Automatically register user in workspace_members table
+    await supabase.from('workspace_members').insert({
+      workspace_id: req.workspace_id,
+      user_id: user.id,
+      role: 'member'
+    });
 
     res.status(201).json({
       _id: user.id,
