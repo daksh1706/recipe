@@ -415,21 +415,34 @@ const RecipeManager = () => {
                         {selectedItem.recipe.ingredients.map((ing, idx) => {
                           const raw = ing.rawMaterial || {};
                           const isLow = Number(raw.currentStock || 0) <= Number(raw.minimumStockLevel || 10);
+                          
+                          // Helper to dynamically convert L/Kg to ml/gm for kitchen-friendly display
+                          const convertUnit = (qty, unitStr) => {
+                            const num = Number(qty);
+                            if (isNaN(num)) return { qty, unit: unitStr };
+                            const unit = (unitStr || '').toLowerCase().trim();
+                            if (unit === 'kg') {
+                              return { qty: parseFloat((num * 1000).toFixed(2)), unit: 'gm' };
+                            }
+                            if (unit === 'l' || unit === 'liter' || unit === 'liters') {
+                              return { qty: parseFloat((num * 1000).toFixed(2)), unit: 'ml' };
+                            }
+                            if (unit === 'g') {
+                              return { qty: num, unit: 'gm' };
+                            }
+                            return { qty: num, unit: unitStr };
+                          };
+
+                          const stdQtyDisp = convertUnit(ing.quantity, ing.unit);
+                          const stockDisp = raw.currentStock !== undefined ? convertUnit(raw.currentStock, raw.unit) : null;
+
                           return (
                             <tr key={idx}>
                               <td style={{ padding: '0.75rem 0.5rem', fontWeight: '700' }}>{raw.name || 'Unknown'}</td>
-                              <td style={{ padding: '0.75rem 0.5rem' }}>{ing.quantity}</td>
-                              <td style={{ padding: '0.75rem 0.5rem', textTransform: 'lowercase' }}>{ing.unit}</td>
+                              <td style={{ padding: '0.75rem 0.5rem' }}>{stdQtyDisp.qty}</td>
+                              <td style={{ padding: '0.75rem 0.5rem', textTransform: 'lowercase' }}>{stdQtyDisp.unit}</td>
                               <td style={{ padding: '0.75rem 0.5rem', fontWeight: '600', color: isLow ? '#d9534f' : 'var(--text-main)' }}>
-                                {(() => {
-                                  if (raw.currentStock === undefined) return 'N/A';
-                                  const stock = Number(raw.currentStock);
-                                  const unit = raw.unit || '';
-                                  if (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
-                                    return `${(stock / 1000).toFixed(1)} ${unit.toLowerCase() === 'ml' ? 'L' : 'kg'}`;
-                                  }
-                                  return `${raw.currentStock} ${raw.unit}`;
-                                })()}
+                                {stockDisp ? `${stockDisp.qty} ${stockDisp.unit}` : 'N/A'}
                                 {isLow && <span style={{ fontSize: '0.65rem', marginLeft: '0.5rem', backgroundColor: 'rgba(217,83,79,0.15)', color: '#d9534f', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>Low</span>}
                               </td>
                             </tr>
