@@ -59,6 +59,9 @@ export const updateUser = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
     updates.status = status;
+    if (status === 'approved' && req.workspace_id) {
+      updates.workspace_id = req.workspace_id;
+    }
   }
   if (role !== undefined) {
     updates.role = role.toLowerCase();
@@ -78,12 +81,30 @@ export const updateUser = async (req, res) => {
       .from('users')
       .update(updates)
       .eq('id', id)
-      .select('id, email, full_name, role, phone, status, is_active')
+      .select('id, email, full_name, role, phone, status, is_active, workspace_id')
       .single();
 
     if (error) throw error;
     
     if (data) {
+      if (status === 'approved' && req.workspace_id) {
+        // Register user in workspace_members
+        const { data: existingMember } = await supabase
+          .from('workspace_members')
+          .select('id')
+          .eq('workspace_id', req.workspace_id)
+          .eq('user_id', id)
+          .maybeSingle();
+
+        if (!existingMember) {
+          await supabase.from('workspace_members').insert({
+            workspace_id: req.workspace_id,
+            user_id: id,
+            role: 'member'
+          });
+        }
+      }
+
       res.json({
         ...data,
         _id: data.id,

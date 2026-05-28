@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { obfuscateCode } from '../config/obfuscation.js';
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET || 'secret', {
@@ -50,6 +51,64 @@ export const registerUser = async (req, res) => {
 
     if (error) throw error;
 
+    let finalWorkspaceId = null;
+    if (user && targetRole === 'admin') {
+      // Automatically create a workspace for the registered admin
+      const workspaceName = `${user.full_name || 'My'}'s Workspace`;
+      let unique = false;
+      let shareCode = '';
+      let obfuscated = '';
+
+      while (!unique) {
+        shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+        obfuscated = obfuscateCode(shareCode);
+        
+        const { data: existing } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('share_code', obfuscated)
+          .maybeSingle();
+
+        if (!existing) {
+          unique = true;
+        }
+      }
+
+      // Create the workspace
+      const { data: workspace, error: wsError } = await supabase
+        .from('workspaces')
+        .insert({
+          workspace_name: workspaceName,
+          owner_id: user.id,
+          share_code: obfuscated
+        })
+        .select()
+        .single();
+
+      if (wsError) throw wsError;
+
+      // Register user as owner in workspace_members
+      const { error: memberError } = await supabase
+        .from('workspace_members')
+        .insert({
+          workspace_id: workspace.id,
+          user_id: user.id,
+          role: 'owner'
+        });
+
+      if (memberError) throw memberError;
+
+      // Update user's active workspace_id
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ workspace_id: workspace.id })
+        .eq('id', user.id);
+
+      if (userError) throw userError;
+
+      finalWorkspaceId = workspace.id;
+    }
+
     if (user) {
       res.status(201).json({
         _id: user.id,
@@ -57,7 +116,7 @@ export const registerUser = async (req, res) => {
         full_name: user.full_name,
         role: user.role,
         status: user.status,
-        workspace_id: user.workspace_id || null,
+        workspace_id: finalWorkspaceId || user.workspace_id || null,
         token: generateToken(user.id, user.role),
       });
     } else {

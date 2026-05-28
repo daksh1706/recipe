@@ -186,7 +186,7 @@ export const getWorkspaceInfo = async (req, res) => {
 
     if (wsError) throw wsError;
 
-    const isOwner = workspace.owner_id === req.user.id;
+    const isOwner = workspace.owner_id === req.user.id || req.user.role === 'admin';
     let shareCode = null;
 
     if (isOwner) {
@@ -234,7 +234,7 @@ export const regenerateShareCode = async (req, res) => {
 
     if (wsError) throw wsError;
 
-    if (workspace.owner_id !== req.user.id) {
+    if (workspace.owner_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only the workspace owner is authorized to regenerate invite codes.' });
     }
 
@@ -293,7 +293,7 @@ export const removeWorkspaceMember = async (req, res) => {
 
     if (wsError) throw wsError;
 
-    if (workspace.owner_id !== req.user.id) {
+    if (workspace.owner_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only the workspace owner is authorized to remove members.' });
     }
 

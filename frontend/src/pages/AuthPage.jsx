@@ -57,9 +57,16 @@ const AuthPage = ({ setAuth }) => {
           navigate('/dashboard');
         }
       } else {
-        showToast('Access request submitted successfully! Pending Admin approval.', 'success');
-        setIsLogin(true);
-        setPassword('');
+        if (data.role === 'admin') {
+          localStorage.setItem('userInfo', JSON.stringify(data));
+          setAuth(data);
+          showToast(`Welcome! Workspace auto-created and logged in as Administrator: ${data.full_name || 'User'}`, 'success');
+          navigate('/dashboard');
+        } else {
+          showToast('Access request submitted successfully! Pending Admin approval.', 'success');
+          setIsLogin(true);
+          setPassword('');
+        }
       }
     } catch (err) {
       showToast(err.message, 'error');
