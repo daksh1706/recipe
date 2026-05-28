@@ -98,6 +98,73 @@ const sortMenuAdjacent = (items) => {
   return sorted;
 };
 
+const getNutrition = (itemName = '') => {
+  const name = itemName.toLowerCase();
+  let calories = 120;
+  let carbs = 15;
+  let protein = 2;
+  let fat = 3;
+
+  if (name.includes('espresso')) {
+    calories = 5;
+    carbs = 0.5;
+    protein = 0.3;
+    fat = 0.1;
+  } else if (name.includes('americano')) {
+    calories = 10;
+    carbs = 1;
+    protein = 0.5;
+    fat = 0.1;
+  } else if (name.includes('latte') || name.includes('flat white')) {
+    calories = 120;
+    carbs = 12;
+    protein = 7;
+    fat = 5;
+  } else if (name.includes('cappuccino')) {
+    calories = 100;
+    carbs = 10;
+    protein = 6;
+    fat = 4;
+  } else if (name.includes('mocha')) {
+    calories = 230;
+    carbs = 28;
+    protein = 8;
+    fat = 9;
+  } else if (name.includes('frappuccino') || name.includes('shake')) {
+    calories = 310;
+    carbs = 42;
+    protein = 9;
+    fat = 11;
+  } else if (name.includes('soda')) {
+    calories = 140;
+    carbs = 35;
+    protein = 0;
+    fat = 0;
+  } else if (name.includes('cupcake') || name.includes('cookie') || name.includes('brownie')) {
+    calories = 280;
+    carbs = 38;
+    protein = 4;
+    fat = 12;
+  } else if (name.includes('pasta')) {
+    calories = 420;
+    carbs = 54;
+    protein = 14;
+    fat = 16;
+  } else if (name.includes('sandwich')) {
+    calories = 350;
+    carbs = 32;
+    protein = 15;
+    fat = 14;
+  }
+
+  if (name.includes('caramel') || name.includes('vanilla') || name.includes('hazelnut') || name.includes('toffee')) {
+    calories += 50;
+    carbs += 12;
+  }
+
+  return { calories, carbs, protein, fat };
+};
+
 const POS = ({ auth }) => {
   const { showToast } = useContext(ToastContext);
   
@@ -105,6 +172,7 @@ const POS = ({ auth }) => {
   const [menuItems, setMenuItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
   const [rawMaterials, setRawMaterials] = useState([]);
+  const [selectedDish, setSelectedDish] = useState(null);
   
   // Build Your Own Customization Modal
   const [custModal, setCustModal] = useState(null); // { item, step, selections }
@@ -912,14 +980,21 @@ const POS = ({ auth }) => {
                   )}
 
                   {/* Product Image with floating Customize button */}
-                  <div style={{
-                    width: '100%',
-                    height: '110px',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden',
-                    backgroundColor: 'var(--border-light)',
-                    position: 'relative'
-                  }}>
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDish(item);
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '135px',
+                      borderRadius: 'var(--radius-md)',
+                      overflow: 'hidden',
+                      backgroundColor: 'var(--border-light)',
+                      position: 'relative',
+                      cursor: 'zoom-in'
+                    }}
+                  >
                     {item.imageUrl ? (
                       <img 
                         src={item.imageUrl} 
@@ -1485,6 +1560,206 @@ const POS = ({ auth }) => {
                   style={{ flex: 1.5, height: '2.5rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', fontSize: '0.85rem' }}
                 >
                   <CheckCircle size={14} /> Add to Cart
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* DISH DETAILS MODAL */}
+      {selectedDish && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass animate-slide-up" style={{
+            width: '480px',
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Close button */}
+            <button 
+              onClick={() => setSelectedDish(null)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                border: 'none',
+                background: 'rgba(0,0,0,0.05)',
+                borderRadius: '50%',
+                padding: '0.4rem',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Top Large Image Cover */}
+            <div style={{
+              width: '100%',
+              height: '200px',
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
+              backgroundColor: 'var(--border-light)',
+              marginBottom: '1.5rem',
+              position: 'relative'
+            }}>
+              {selectedDish.imageUrl ? (
+                <img 
+                  src={selectedDish.imageUrl} 
+                  alt={selectedDish.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-subtle)' }}>
+                  <Coffee size={64} />
+                </div>
+              )}
+            </div>
+
+            {/* Dish Info */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                color: 'var(--primary)', 
+                fontWeight: '800', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                {selectedDish.category.replace('_', ' ')}
+              </span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-main)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                {selectedDish.name}
+              </h2>
+              {selectedDish.description && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  {selectedDish.description}
+                </p>
+              )}
+            </div>
+
+            {/* Nutritional metrics grid */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                Nutrition Estimates (Per Serving)
+              </h3>
+              {(() => {
+                const nut = getNutrition(selectedDish.name);
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CALORIES</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>{nut.calories} kcal</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CARBS</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.carbs}g</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>PROTEIN</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.protein}g</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>FAT</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.fat}g</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Ingredients used */}
+            <div style={{ marginBottom: '1.75rem' }}>
+              <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                Key Ingredients Used
+              </h3>
+              {selectedDish.recipe && selectedDish.recipe.ingredients && selectedDish.recipe.ingredients.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: '100px', overflowY: 'auto' }} className="custom-scroll">
+                  {selectedDish.recipe.ingredients.map(ing => (
+                    <span 
+                      key={ing.id} 
+                      style={{ 
+                        fontSize: '0.75rem', 
+                        fontWeight: '700', 
+                        padding: '0.35rem 0.75rem', 
+                        borderRadius: '20px', 
+                        background: 'var(--bg-dark)', 
+                        color: 'var(--text-main)',
+                        border: '1px solid var(--border)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      🌱 {ing.rawMaterial ? ing.rawMaterial.name : 'Ingredient'}
+                      <span style={{ color: 'var(--primary)', fontWeight: '800' }}>
+                        ({ing.quantity} {ing.unit})
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No default recipe configured for this item.
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                onClick={() => setSelectedDish(null)}
+                className="btn btn-secondary" 
+                style={{ flex: 1, height: '2.6rem', justifyContent: 'center' }}
+              >
+                Close Details
+              </button>
+              {selectedDish.isAvailable ? (
+                <button 
+                  onClick={() => {
+                    addToCart(selectedDish);
+                    setSelectedDish(null);
+                  }}
+                  className="btn btn-primary" 
+                  style={{ flex: 1.5, height: '2.6rem', justifyContent: 'center' }}
+                >
+                  <ShoppingCart size={16} /> Add to Cart — ₹{selectedDish.price.toFixed(2)}
+                </button>
+              ) : (
+                <button 
+                  disabled
+                  className="btn" 
+                  style={{ 
+                    flex: 1.5, 
+                    height: '2.6rem', 
+                    justifyContent: 'center', 
+                    backgroundColor: 'var(--border)', 
+                    color: 'var(--text-subtle)',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontWeight: '700',
+                    cursor: 'not-allowed'
+                  }}
+                >
+                  Out of Stock
                 </button>
               )}
             </div>

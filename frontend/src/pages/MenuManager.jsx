@@ -42,6 +42,73 @@ const generateNextCode = (cat, itemsList) => {
   return `${prefix}-${formattedNum}`;
 };
 
+const getNutrition = (itemName = '') => {
+  const name = itemName.toLowerCase();
+  let calories = 120;
+  let carbs = 15;
+  let protein = 2;
+  let fat = 3;
+
+  if (name.includes('espresso')) {
+    calories = 5;
+    carbs = 0.5;
+    protein = 0.3;
+    fat = 0.1;
+  } else if (name.includes('americano')) {
+    calories = 10;
+    carbs = 1;
+    protein = 0.5;
+    fat = 0.1;
+  } else if (name.includes('latte') || name.includes('flat white')) {
+    calories = 120;
+    carbs = 12;
+    protein = 7;
+    fat = 5;
+  } else if (name.includes('cappuccino')) {
+    calories = 100;
+    carbs = 10;
+    protein = 6;
+    fat = 4;
+  } else if (name.includes('mocha')) {
+    calories = 230;
+    carbs = 28;
+    protein = 8;
+    fat = 9;
+  } else if (name.includes('frappuccino') || name.includes('shake')) {
+    calories = 310;
+    carbs = 42;
+    protein = 9;
+    fat = 11;
+  } else if (name.includes('soda')) {
+    calories = 140;
+    carbs = 35;
+    protein = 0;
+    fat = 0;
+  } else if (name.includes('cupcake') || name.includes('cookie') || name.includes('brownie')) {
+    calories = 280;
+    carbs = 38;
+    protein = 4;
+    fat = 12;
+  } else if (name.includes('pasta')) {
+    calories = 420;
+    carbs = 54;
+    protein = 14;
+    fat = 16;
+  } else if (name.includes('sandwich')) {
+    calories = 350;
+    carbs = 32;
+    protein = 15;
+    fat = 14;
+  }
+
+  if (name.includes('caramel') || name.includes('vanilla') || name.includes('hazelnut') || name.includes('toffee')) {
+    calories += 50;
+    carbs += 12;
+  }
+
+  return { calories, carbs, protein, fat };
+};
+
 const MenuManager = () => {
   const { showToast } = useContext(ToastContext);
   const navigate = useNavigate();
@@ -59,6 +126,16 @@ const MenuManager = () => {
   // Form Modal States
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const [selectedDish, setSelectedDish] = useState(null);
 
   // Form Fields
   const [itemCode, setItemCode] = useState('');
@@ -110,16 +187,22 @@ const MenuManager = () => {
   }, []);
 
   // Delete flow
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this menu product? This will purge recipe associations!')) return;
-    try {
-      const res = await fetch(`/api/menu/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Deletion failed');
-      setMenuItems(prev => prev.filter(m => m._id !== id));
-      showToast('Menu product successfully deleted!');
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+  const handleDelete = (id) => {
+    setConfirmModal({
+      show: true,
+      title: 'Delete Menu Product',
+      message: 'Are you sure you want to delete this menu product? This will purge recipe associations!',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/menu/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Deletion failed');
+          setMenuItems(prev => prev.filter(m => m._id !== id));
+          showToast('Menu product successfully deleted!');
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    });
   };
 
   // Availability toggle
@@ -200,7 +283,7 @@ const MenuManager = () => {
       if (res.ok) {
         showToast(`${name} saved successfully!`, 'success');
         setShowModal(false);
-        fetchMenu();
+        fetchMenuItems();
       } else {
         const err = await res.json();
         showToast(err.message || 'Failed to save product', 'error');
@@ -211,24 +294,29 @@ const MenuManager = () => {
   };
 
   // Delete product
-  const handleDeleteItem = async (id, name) => {
-    if (!window.confirm(`Delete ${name} from the active menu? This action cannot be undone.`)) return;
-
-    try {
-      const res = await fetch(`/api/menu/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
-      if (res.ok) {
-        showToast(`${name} deleted from menu`, 'success');
-        fetchMenu();
-      } else {
-        const data = await res.json();
-        showToast(data.message || 'Deletion failed', 'error');
+  const handleDeleteItem = (id, name) => {
+    setConfirmModal({
+      show: true,
+      title: 'Delete Menu Item',
+      message: `Are you sure you want to delete ${name} from the active menu? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/menu/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${auth.token}` }
+          });
+          if (res.ok) {
+            showToast(`${name} deleted from menu`, 'success');
+            fetchMenuItems();
+          } else {
+            const data = await res.json();
+            showToast(data.message || 'Deletion failed', 'error');
+          }
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
       }
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    });
   };
 
   // View recipe redirect
@@ -351,18 +439,26 @@ const MenuManager = () => {
           {filteredMenu.map(item => (
             <div 
               key={item._id} 
-              className="glass" 
+              className="glass hover-brighten" 
+              onClick={() => setSelectedDish(item)}
               style={{ 
                 borderRadius: 'var(--radius-lg)', 
                 padding: '1.25rem', 
                 display: 'flex', 
                 flexDirection: 'column',
                 opacity: item.isAvailable ? 1 : 0.6,
-                position: 'relative'
+                position: 'relative',
+                cursor: 'pointer'
               }}
             >
               {/* Product Image */}
-              <div style={{ width: '100%', height: '120px', borderRadius: 'var(--radius-md)', overflow: 'hidden', backgroundColor: 'var(--border-light)', marginBottom: '1rem', position: 'relative' }}>
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedDish(item);
+                }}
+                style={{ width: '100%', height: '120px', borderRadius: 'var(--radius-md)', overflow: 'hidden', backgroundColor: 'var(--border-light)', marginBottom: '1rem', position: 'relative', cursor: 'zoom-in' }}
+              >
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                 ) : (
@@ -371,7 +467,10 @@ const MenuManager = () => {
                 
                 {/* Active availability indicator */}
                 <button 
-                  onClick={() => handleToggleAvailability(item)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleAvailability(item);
+                  }}
                   style={{
                     position: 'absolute',
                     top: '8px',
@@ -399,7 +498,16 @@ const MenuManager = () => {
               {/* Title & Info */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)' }}>{item.name}</h3>
+                  <h3 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDish(item);
+                    }}
+                    style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer' }}
+                    title="Click to view details"
+                  >
+                    {item.name} 🔍
+                  </h3>
                   <span style={{ fontSize: '0.65rem', color: 'var(--text-subtle)', fontWeight: '700' }}>{item.itemCode}</span>
                 </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4, height: '2.5rem', overflow: 'hidden' }}>{item.description || 'No description provided.'}</p>
@@ -417,7 +525,7 @@ const MenuManager = () => {
               </div>
 
               {/* Actions row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }} onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => handleViewRecipe(item)} className="btn btn-secondary" style={{ height: '2rem', padding: 0, fontSize: '0.75rem', fontWeight: '800' }}>
                   View Recipe
                 </button>
@@ -446,9 +554,19 @@ const MenuManager = () => {
             </thead>
             <tbody>
               {filteredMenu.map(item => (
-                <tr key={item._id} className="hover-brighten" style={{ opacity: item.isAvailable ? 1 : 0.6 }}>
+                <tr 
+                  key={item._id} 
+                  className="hover-brighten" 
+                  onClick={() => setSelectedDish(item)}
+                  style={{ opacity: item.isAvailable ? 1 : 0.6, cursor: 'pointer' }}
+                >
                   <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-subtle)', fontSize: '0.75rem', fontWeight: '700' }}>{item.itemCode}</td>
-                  <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', fontSize: '0.85rem' }}>{item.name}</td>
+                  <td 
+                    style={{ padding: '0.85rem 0.5rem', fontWeight: '800', fontSize: '0.85rem', color: 'var(--primary)' }}
+                    title="Click to view specifications & ingredients"
+                  >
+                    {item.name} 🔍
+                  </td>
                   <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', textTransform: 'capitalize' }}>{item.category.replace('_', ' ')}</td>
                   <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', color: 'var(--primary)' }}>₹{Number(item.price).toFixed(1)}</td>
                   <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', fontWeight: '600' }}>{item.gstPercent}%</td>
@@ -456,7 +574,10 @@ const MenuManager = () => {
                   {/* Availability check toggle */}
                   <td style={{ padding: '0.85rem 0.5rem' }}>
                     <button 
-                      onClick={() => handleToggleAvailability(item)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleAvailability(item);
+                      }}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -473,7 +594,7 @@ const MenuManager = () => {
                     </button>
                   </td>
 
-                  <td style={{ padding: '0.85rem 0.5rem' }}>
+                  <td style={{ padding: '0.85rem 0.5rem' }} onClick={(e) => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => handleViewRecipe(item)} className="btn btn-secondary" style={{ height: '1.8rem', padding: '0 0.5rem', fontSize: '0.7rem' }}>Recipe</button>
                       <button onClick={() => handleOpenModal(item)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)' }} title="Edit"><Edit size={14} /></button>
@@ -610,6 +731,250 @@ const MenuManager = () => {
               </button>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {confirmModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div className="glass animate-slide-up" style={{
+            width: '400px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              padding: '1rem',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(217, 83, 79, 0.15)',
+              color: '#d9534f',
+              marginBottom: '1rem'
+            }}>
+              <Trash2 size={32} />
+            </div>
+            
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.75rem' }}>
+              {confirmModal.title || 'Are you sure?'}
+            </h3>
+            
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                className="btn btn-secondary" 
+                style={{ flex: 1, height: '2.5rem', justifyContent: 'center' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm();
+                  setConfirmModal({ ...confirmModal, show: false });
+                }}
+                className="btn" 
+                style={{ 
+                  flex: 1, 
+                  height: '2.5rem', 
+                  backgroundColor: '#d9534f', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DISH DETAILS MODAL */}
+      {selectedDish && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="glass animate-slide-up animate-fade-in" style={{
+            width: '480px',
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Close button */}
+            <button 
+              onClick={() => setSelectedDish(null)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                border: 'none',
+                background: 'rgba(0,0,0,0.05)',
+                borderRadius: '50%',
+                padding: '0.4rem',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Top Large Image Cover */}
+            <div style={{
+              width: '100%',
+              height: '200px',
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
+              backgroundColor: 'var(--border-light)',
+              marginBottom: '1.5rem',
+              position: 'relative'
+            }}>
+              {selectedDish.imageUrl ? (
+                <img 
+                  src={selectedDish.imageUrl} 
+                  alt={selectedDish.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-subtle)' }}>
+                  <Coffee size={64} />
+                </div>
+              )}
+            </div>
+
+            {/* Dish Info */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                color: 'var(--primary)', 
+                fontWeight: '800', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                {selectedDish.category.replace('_', ' ')}
+              </span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-main)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                {selectedDish.name}
+              </h2>
+              {selectedDish.description && (
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                  {selectedDish.description}
+                </p>
+              )}
+            </div>
+
+            {/* Nutritional metrics grid */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                Nutrition Estimates (Per Serving)
+              </h3>
+              {(() => {
+                const nut = getNutrition(selectedDish.name);
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CALORIES</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>{nut.calories} kcal</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CARBS</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.carbs}g</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>PROTEIN</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.protein}g</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>FAT</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.fat}g</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Ingredients used */}
+            <div style={{ marginBottom: '1.75rem' }}>
+              <h3 style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                Key Ingredients Used
+              </h3>
+              {selectedDish.recipe && selectedDish.recipe.ingredients && selectedDish.recipe.ingredients.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: '100px', overflowY: 'auto' }} className="custom-scroll">
+                  {selectedDish.recipe.ingredients.map(ing => (
+                    <span 
+                      key={ing.id} 
+                      style={{ 
+                        fontSize: '0.75rem', 
+                        fontWeight: '700', 
+                        padding: '0.35rem 0.75rem', 
+                        borderRadius: '20px', 
+                        background: 'var(--bg-dark)', 
+                        color: 'var(--text-main)',
+                        border: '1px solid var(--border)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      🌱 {ing.rawMaterial ? ing.rawMaterial.name : 'Ingredient'}
+                      <span style={{ color: 'var(--primary)', fontWeight: '800' }}>
+                        ({ing.quantity} {ing.unit})
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No default recipe configured for this item.
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                onClick={() => setSelectedDish(null)}
+                className="btn btn-secondary" 
+                style={{ flex: 1, height: '2.6rem', justifyContent: 'center' }}
+              >
+                Close Details
+              </button>
+            </div>
+
           </div>
         </div>
       )}

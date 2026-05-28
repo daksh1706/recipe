@@ -140,7 +140,7 @@ const menuItemsData = [
     description: 'Classic rich double espresso shot with golden crema.',
     prep_time: 3,
     serving_size: 'Double Shot (40ml)',
-    instructions: '1. Grind beans to a fine consistency (like table salt). Dose into the portafilter and distribute evenly.\nTamp firmly and evenly with flat, consistent pressure. Wipe the rim clean.\nPurge the group head for 2 seconds, then lock in the portafilter and begin extraction.\nExtract at 9 bar / 92–94°C for 25–30 seconds. The shot should flow as a thin, steady stream.\nYield: 30–40ml with a golden crema on top. If it runs too fast, grind finer; too slow, grind coarser.',
+    instructions: '1. Grind beans to a fine consistency (like table salt). Dose into the portafilter and distribute evenly.\n2. Tamp firmly and evenly with flat, consistent pressure. Wipe the rim clean.\n3. Purge the group head for 2 seconds, then lock in the portafilter and begin extraction.\n4. Extract at 9 bar / 92–94°C for 25–30 seconds. The shot should flow as a thin, steady stream.\n5. Yield: 30–40ml with a golden crema on top. If it runs too fast, grind finer; too slow, grind coarser.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 40, unit: 'ml' }
@@ -153,7 +153,7 @@ const menuItemsData = [
     description: 'Espresso shot pulled directly over vanilla syrup.',
     prep_time: 3,
     serving_size: 'Single Shot (50ml)',
-    instructions: '1. Pre-warm the espresso cup with hot water, then discard.\nAdd 10ml of vanilla syrup to the bottom of the cup.\nPull the espresso shot directly over the syrup — the heat will naturally blend them.\nStir gently 2–3 times and serve immediately.',
+    instructions: '1. Pre-warm the espresso cup with hot water, then discard.\n2. Add 10ml of vanilla syrup to the bottom of the cup.\n3. Pull the espresso shot directly over the syrup — the heat will naturally blend them.\n4. Stir gently 2–3 times and serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 40, unit: 'ml' },
@@ -167,7 +167,7 @@ const menuItemsData = [
     description: 'Classic espresso shot combined with premium caramel syrup.',
     prep_time: 3,
     serving_size: 'Single Shot (50ml)',
-    instructions: '1. Pre-warm the cup, then add 10ml of caramel syrup to the bottom.\nPull the espresso directly over the syrup and stir well to fully dissolve.\nOptionally finish with a small drizzle of caramel sauce on the crema. Serve immediately.',
+    instructions: '1. Pre-warm the cup, then add 10ml of caramel syrup to the bottom.\n2. Pull the espresso directly over the syrup and stir well to fully dissolve.\n3. Optionally finish with a small drizzle of caramel sauce on the crema. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 40, unit: 'ml' },
@@ -181,7 +181,7 @@ const menuItemsData = [
     description: 'Perfect 1:1:1 balance of espresso, steamed whole milk, and thick foam.',
     prep_time: 5,
     serving_size: 'Regular (180ml)',
-    instructions: '1. Pull a double espresso into a pre-warmed 180ml cup.\nPour ~150ml of cold milk into a steaming pitcher. Aerate for 4–5 seconds near the surface to build foam, then submerge the wand deeper and heat to 62–65°C. The result should be thick, stiff foam — not silky microfoam.\nTap the pitcher on the counter and swirl to settle.\nPour the steamed milk over the espresso, then spoon the thick foam on top to achieve a 1:1:1 espresso:milk:foam ratio.\nDust with cocoa powder through a fine sieve and serve.',
+    instructions: '1. Pull a double espresso into a pre-warmed 180ml cup.\n2. Pour ~150ml of cold milk into a steaming pitcher. Aerate for 4–5 seconds near the surface to build foam, then submerge the wand deeper and heat to 62–65°C. The result should be thick, stiff foam — not silky microfoam.\n3. Tap the pitcher on the counter and swirl to settle.\n4. Pour the steamed milk over the espresso, then spoon the thick foam on top to achieve a 1:1:1 espresso:milk:foam ratio.\n5. Dust with cocoa powder through a fine sieve and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 120, unit: 'ml' },
@@ -195,7 +195,7 @@ const menuItemsData = [
     description: 'Classic cappuccino infused with warm vanilla syrup.',
     prep_time: 5,
     serving_size: 'Regular (180ml)',
-    instructions: '1. Pull double espresso and stir in 10ml of vanilla syrup until fully dissolved.\nSteam milk to 62–65°C with stiff foam (see Recipe 4 technique).\nPour steamed milk over the espresso, then spoon foam on top.\nDust with cocoa powder and serve.',
+    instructions: '1. Pull double espresso and stir in 10ml of vanilla syrup until fully dissolved.\n2. Steam milk to 62–65°C with stiff foam (see Recipe 4 technique).\n3. Pour steamed milk over the espresso, then spoon foam on top.\n4. Dust with cocoa powder and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 120, unit: 'ml' },
@@ -210,7 +210,7 @@ const menuItemsData = [
     description: 'Cappuccino sweetened with caramel syrup and finished with a rich caramel drizzle.',
     prep_time: 5,
     serving_size: 'Regular (180ml)',
-    instructions: '1. Pull double espresso and stir in 10ml of caramel syrup until dissolved.\nSteam milk to 62–65°C with stiff foam.\nPour steamed milk over espresso, spoon foam on top.\nFinish with a drizzle of caramel sauce over the foam and serve.',
+    instructions: '1. Pull double espresso and stir in 10ml of caramel syrup until dissolved.\n2. Steam milk to 62–65°C with stiff foam.\n3. Pour steamed milk over espresso, spoon foam on top.\n4. Finish with a drizzle of caramel sauce over the foam and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 120, unit: 'ml' },
@@ -225,7 +225,7 @@ const menuItemsData = [
     description: 'Smooth, double shot espresso blended with steamed microfoam whole milk.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Pull a double espresso into a pre-warmed 240ml cup.\nSteam ~220ml of cold milk to 62–65°C, aerating briefly (2–3 seconds only) for smooth, velvety microfoam — not thick foam. Tap and swirl until glossy.\nPour the milk from a low height into the espresso. The microfoam will naturally rise, leaving about 1cm of foam on top.\nLatte art is optional. Serve immediately.',
+    instructions: '1. Pull a double espresso into a pre-warmed 240ml cup.\n2. Steam ~220ml of cold milk to 62–65°C, aerating briefly (2–3 seconds only) for smooth, velvety microfoam — not thick foam. Tap and swirl until glossy.\n3. Pour the milk from a low height into the espresso. The microfoam will naturally rise, leaving about 1cm of foam on top.\n4. Latte art is optional. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 180, unit: 'ml' }
@@ -238,7 +238,7 @@ const menuItemsData = [
     description: 'Espresso and steamed microfoam milk sweetened with vanilla syrup.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of vanilla syrup to a pre-warmed 240ml cup.\nPull espresso directly over the syrup and stir to combine.\nSteam milk to 62–65°C with silky microfoam and pour over the espresso from a low height. Serve immediately.',
+    instructions: '1. Add 15ml of vanilla syrup to a pre-warmed 240ml cup.\n2. Pull espresso directly over the syrup and stir to combine.\n3. Steam milk to 62–65°C with silky microfoam and pour over the espresso from a low height. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 180, unit: 'ml' },
@@ -252,7 +252,7 @@ const menuItemsData = [
     description: 'Velvety espresso latte with caramel syrup, topped with rich caramel drizzle.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of caramel syrup to a pre-warmed cup, pull espresso over it, and stir.\nSteam milk to 62–65°C with silky microfoam and pour slowly over the espresso.\nDrizzle caramel sauce over the foam in a spiral. Serve immediately.',
+    instructions: '1. Add 15ml of caramel syrup to a pre-warmed cup, pull espresso over it, and stir.\n2. Steam milk to 62–65°C with silky microfoam and pour slowly over the espresso.\n3. Drizzle caramel sauce over the foam in a spiral. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 180, unit: 'ml' },
@@ -267,7 +267,7 @@ const menuItemsData = [
     description: 'Espresso combined with steamed milk and nutty hazelnut syrup.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of hazelnut syrup to the cup, pull espresso over it, and stir well.\nSteam milk to 62–65°C with silky microfoam.\nPour steamed milk over the espresso. Serve immediately.',
+    instructions: '1. Add 15ml of hazelnut syrup to the cup, pull espresso over it, and stir well.\n2. Steam milk to 62–65°C with silky microfoam.\n3. Pour steamed milk over the espresso. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 180, unit: 'ml' },
@@ -281,7 +281,7 @@ const menuItemsData = [
     description: 'Premium latte infused with fragrant house lavender syrup.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of lavender syrup to the cup, pull espresso over it, and stir.\nSteam milk (oat milk works especially well here) to 62–65°C with silky microfoam.\nPour over the espresso. Garnish with a few dried culinary lavender buds (optional).',
+    instructions: '1. Add 15ml of lavender syrup to the cup, pull espresso over it, and stir.\n2. Steam milk (oat milk works especially well here) to 62–65°C with silky microfoam.\n3. Pour over the espresso. Garnish with a few dried culinary lavender buds (optional).',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 180, unit: 'ml' },
@@ -296,7 +296,7 @@ const menuItemsData = [
     description: 'A delicate floral espresso latte infused with sweet rose syrup.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of rose syrup to the cup, pull espresso over it, and stir gently.\nSteam milk to 62–65°C with silky microfoam.\nPour over the espresso. Garnish with a food-safe rose petal (optional).',
+    instructions: '1. Add 15ml of rose syrup to the cup, pull espresso over it, and stir gently.\n2. Steam milk to 62–65°C with silky microfoam.\n3. Pour over the espresso. Garnish with a food-safe rose petal (optional).',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 180, unit: 'ml' },
@@ -311,7 +311,7 @@ const menuItemsData = [
     description: 'Espresso and rich chocolate sauce blended with steamed whole milk.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add chocolate sauce to the cup and pull espresso over it. Stir vigorously until fully combined.\nSteam 180ml of milk to 62–65°C with light microfoam and pour over the mocha base.\nTop with whipped cream and drizzle chocolate sauce over the top. Serve immediately.',
+    instructions: '1. Add chocolate sauce to the cup and pull espresso over it. Stir vigorously until fully combined.\n2. Steam 180ml of milk to 62–65°C with light microfoam and pour over the mocha base.\n3. Top with whipped cream and drizzle chocolate sauce over the top. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -325,7 +325,7 @@ const menuItemsData = [
     description: 'Rich espresso with white chocolate sauce and steamed whole milk, topped with cream.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add white chocolate sauce to the cup, pull espresso over it, and stir well until fully smooth.\nSteam milk to 62–65°C with light microfoam and pour over the base.\nTop with whipped cream. Garnish with white chocolate shavings or vanilla powder (optional).',
+    instructions: '1. Add white chocolate sauce to the cup, pull espresso over it, and stir well until fully smooth.\n2. Steam milk to 62–65°C with light microfoam and pour over the base.\n3. Top with whipped cream. Garnish with white chocolate shavings or vanilla powder (optional).',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -340,7 +340,7 @@ const menuItemsData = [
     description: 'Espresso mocha with an infusion of caramel syrup and a luxurious caramel drizzle.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add chocolate sauce and caramel syrup to the cup. Pull espresso over them and stir until smooth.\nSteam milk to 62–65°C and pour over the base.\nTop with whipped cream and drizzle caramel sauce over the top.',
+    instructions: '1. Add chocolate sauce and caramel syrup to the cup. Pull espresso over them and stir until smooth.\n2. Steam milk to 62–65°C and pour over the base.\n3. Top with whipped cream and drizzle caramel sauce over the top.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -356,7 +356,7 @@ const menuItemsData = [
     description: 'Nutty espresso mocha with rich chocolate sauce and hazelnut syrup.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add chocolate sauce and hazelnut syrup to the cup. Pull espresso over them and stir well — the combination creates a Nutella-like flavour.\nSteam milk to 62–65°C and pour over the base.\nTop with whipped cream, a chocolate drizzle, and optional crushed hazelnuts.',
+    instructions: '1. Add chocolate sauce and hazelnut syrup to the cup. Pull espresso over them and stir well — the combination creates a Nutella-like flavour.\n2. Steam milk to 62–65°C and pour over the base.\n3. Top with whipped cream, a chocolate drizzle, and optional crushed hazelnuts.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -372,7 +372,7 @@ const menuItemsData = [
     description: 'Double espresso shots diluted with premium hot water.',
     prep_time: 4,
     serving_size: 'Regular (200ml)',
-    instructions: '1. Pull the double espresso into a 200–250ml cup.\nHeat water to 85–90°C (not boiling — boiling scorches the espresso).\nPour the hot water over the espresso shot, not the other way around, to preserve the crema. Serve immediately.',
+    instructions: '1. Pull the double espresso into a 200–250ml cup.\n2. Heat water to 85–90°C (not boiling — boiling scorches the espresso).\n3. Pour the hot water over the espresso shot, not the other way around, to preserve the crema. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 150, unit: 'ml' }
@@ -385,7 +385,7 @@ const menuItemsData = [
     description: 'Double shot Americano infused with sweet vanilla syrup.',
     prep_time: 4,
     serving_size: 'Regular (200ml)',
-    instructions: '1. Add 10ml of vanilla syrup to the cup. Pull espresso over it and stir.\nPour 120–150ml of hot water (85–90°C) over the espresso. Serve immediately.',
+    instructions: '1. Add 10ml of vanilla syrup to the cup. Pull espresso over it and stir.\n2. Pour 120–150ml of hot water (85–90°C) over the espresso. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 150, unit: 'ml' },
@@ -399,7 +399,7 @@ const menuItemsData = [
     description: 'Americano sweetened with a premium caramel syrup drizzle.',
     prep_time: 4,
     serving_size: 'Regular (200ml)',
-    instructions: '1. Add 10ml of caramel syrup to the cup. Pull espresso over it and stir to dissolve.\nAdd 120–150ml of hot water (85–90°C), stir gently, and serve immediately.',
+    instructions: '1. Add 10ml of caramel syrup to the cup. Pull espresso over it and stir to dissolve.\n2. Add 120–150ml of hot water (85–90°C), stir gently, and serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 150, unit: 'ml' },
@@ -413,7 +413,7 @@ const menuItemsData = [
     description: 'Short, concentrated double ristretto shot topped with silky, thin steamed milk.',
     prep_time: 5,
     serving_size: 'Regular (160ml)',
-    instructions: '1. Pull a ristretto double shot — same coffee dose as espresso but only 60ml total water, extracted in 18–22 seconds. The result is sweeter and more concentrated.\nSteam ~150ml of cold milk to 60–62°C, aerating very briefly (1–2 seconds only). The milk should be extremely silky with almost no visible foam — like liquid cream.\nTap and swirl the pitcher well. Pour from a very low height into a 160ml cup, leaving only a very thin (less than 5mm) foam layer on top.',
+    instructions: '1. Pull a ristretto double shot — same coffee dose as espresso but only 60ml total water, extracted in 18–22 seconds. The result is sweeter and more concentrated.\n2. Steam ~150ml of cold milk to 60–62°C, aerating very briefly (1–2 seconds only). The milk should be extremely silky with almost no visible foam — like liquid cream.\n3. Tap and swirl the pitcher well. Pour from a very low height into a 160ml cup, leaving only a very thin (less than 5mm) foam layer on top.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 120, unit: 'ml' }
@@ -426,7 +426,7 @@ const menuItemsData = [
     description: 'A classic Flat White infused with premium vanilla syrup.',
     prep_time: 5,
     serving_size: 'Regular (160ml)',
-    instructions: '1. Add 8–10ml of vanilla syrup to a pre-warmed 160ml cup.\nPull ristretto double shot over the syrup and stir briefly.\nSteam milk to 60–62°C with minimal, silky microfoam and pour from a low height. Serve immediately.',
+    instructions: '1. Add 8–10ml of vanilla syrup to a pre-warmed 160ml cup.\n2. Pull ristretto double shot over the syrup and stir briefly.\n3. Steam milk to 60–62°C with minimal, silky microfoam and pour from a low height. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 120, unit: 'ml' },
@@ -440,7 +440,7 @@ const menuItemsData = [
     description: 'Double ristretto with silky steamed milk and house-made toffee syrup.',
     prep_time: 5,
     serving_size: 'Regular (160ml)',
-    instructions: '1. Add 8–10ml of toffee or brown sugar syrup to a pre-warmed flat white cup.\nPull ristretto over the syrup and stir to combine.\nSteam milk to 60–62°C with very silky, minimal microfoam and pour from a low height.',
+    instructions: '1. Add 8–10ml of toffee or brown sugar syrup to a pre-warmed flat white cup.\n2. Pull ristretto over the syrup and stir to combine.\n3. Steam milk to 60–62°C with very silky, minimal microfoam and pour from a low height.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 120, unit: 'ml' },
@@ -454,7 +454,7 @@ const menuItemsData = [
     description: 'Double shot espresso marked with a dollop of thick milk foam.',
     prep_time: 3,
     serving_size: 'Single (60ml)',
-    instructions: '1. Pull a single or double espresso into a small pre-warmed demitasse cup.\nSteam a small amount of milk (80ml), aerating for longer to create stiff, dry foam that holds its shape.\nSpoon 1–2 large dollops of foam directly onto the centre of the espresso — it should sit on top as a distinct mark, not blend in.',
+    instructions: '1. Pull a single or double espresso into a small pre-warmed demitasse cup.\n2. Steam a small amount of milk (80ml), aerating for longer to create stiff, dry foam that holds its shape.\n3. Spoon 1–2 large dollops of foam directly onto the centre of the espresso — it should sit on top as a distinct mark, not blend in.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 30, unit: 'ml' }
@@ -467,7 +467,7 @@ const menuItemsData = [
     description: 'Layered milk and vanilla syrup, marked with espresso and dynamic caramel drizzle.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of vanilla syrup to a 240ml glass.\nSteam milk to 62–65°C with silky microfoam. Pour the milk into the glass first, holding back the foam.\nPull a double espresso and pour it slowly over the back of a spoon onto the milk — it will float as a distinct top layer.\nDrizzle caramel sauce over the espresso in a crosshatch or spiral pattern. Serve without stirring.',
+    instructions: '1. Add 15ml of vanilla syrup to a 240ml glass.\n2. Steam milk to 62–65°C with silky microfoam. Pour the milk into the glass first, holding back the foam.\n3. Pull a double espresso and pour it slowly over the back of a spoon onto the milk — it will float as a distinct top layer.\n4. Drizzle caramel sauce over the espresso in a crosshatch or spiral pattern. Serve without stirring.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -482,7 +482,7 @@ const menuItemsData = [
     description: 'Beautifully layered hazelnut syrup, steamed milk, and a bold espresso shot on top.',
     prep_time: 5,
     serving_size: 'Large (240ml)',
-    instructions: '1. Add 15ml of hazelnut syrup to a 240ml glass.\nSteam milk to 62–65°C with silky microfoam and pour into the glass.\nPull a double espresso and pour slowly over the back of a spoon to layer it on top.\n2. COLD BREWS',
+    instructions: '1. Add 15ml of hazelnut syrup to a 240ml glass.\n2. Steam milk to 62–65°C with silky microfoam and pour into the glass.\n3. Pull a double espresso and pour slowly over the back of a spoon to layer it on top.\n4. COLD BREWS',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -498,7 +498,7 @@ const menuItemsData = [
     description: 'Strong, bold dark roast coffee dripped over ice and sweetened condensed milk.',
     prep_time: 10,
     serving_size: 'Tall Glass (250ml)',
-    instructions: '1. Set a Vietnamese phin filter over a small cup. Add 20g of coarse-ground dark roast coffee. Pour 10ml of hot water to bloom the grounds for 30 seconds, then place the press plate on top.\nSlowly pour the remaining 70ml of hot water over the press. Cover and let drip for 4–5 minutes — do not rush.\nAdd 30ml of condensed milk to a tall glass. Pour the hot brewed coffee over it and stir well.\nFill another glass with ice and pour the coffee-milk mixture over it. Serve with a straw.',
+    instructions: '1. Set a Vietnamese phin filter over a small cup. Add 20g of coarse-ground dark roast coffee. Pour 10ml of hot water to bloom the grounds for 30 seconds, then place the press plate on top.\n2. Slowly pour the remaining 70ml of hot water over the press. Cover and let drip for 4–5 minutes — do not rush.\n3. Add 30ml of condensed milk to a tall glass. Pour the hot brewed coffee over it and stir well.\n4. Fill another glass with ice and pour the coffee-milk mixture over it. Serve with a straw.',
     ingredients: [
       { name: 'Coarse ground dark roast coffee', qty: 20, unit: 'g' },
       { name: 'Sweetened condensed milk', qty: 30, unit: 'ml' },
@@ -512,7 +512,7 @@ const menuItemsData = [
     description: 'Traditional phin-brewed dark coffee sweetened with dynamic vanilla syrup over ice.',
     prep_time: 10,
     serving_size: 'Tall Glass (250ml)',
-    instructions: '1. Brew coffee using the phin filter method (see Recipe 26, Steps 1–2).\nAdd 20ml of vanilla syrup to a tall glass, pour the brewed coffee over it, and stir.\nFill a glass with ice and pour the coffee over it. Serve with a straw.',
+    instructions: '1. Brew coffee using the phin filter method (see Recipe 26, Steps 1–2).\n2. Add 20ml of vanilla syrup to a tall glass, pour the brewed coffee over it, and stir.\n3. Fill a glass with ice and pour the coffee over it. Serve with a straw.',
     ingredients: [
       { name: 'Coarse ground dark roast coffee', qty: 20, unit: 'g' },
       { name: 'Vanilla syrup', qty: 20, unit: 'ml' },
@@ -526,7 +526,7 @@ const menuItemsData = [
     description: 'Rich, smooth cold brew concentrate poured over ice and topped with premium vanilla ice cream.',
     prep_time: 5,
     serving_size: 'Tall Glass (300ml)',
-    instructions: '1. Prepare cold brew in advance: Combine 1 part coarse coffee to 5 parts cold water. Stir, cover, and refrigerate for 12–16 hours. Strain through a fine sieve or paper filter. Store in the fridge for up to 2 weeks. Dilute 1:1 with cold water before serving.\nFill a tall glass with ice. Add simple syrup if desired and pour in 120ml of cold brew.\nGently place 2 scoops of vanilla ice cream on top. Serve immediately with a spoon and straw.',
+    instructions: '1. Prepare cold brew in advance: Combine 1 part coarse coffee to 5 parts cold water. Stir, cover, and refrigerate for 12–16 hours. Strain through a fine sieve or paper filter. Store in the fridge for up to 2 weeks. Dilute 1:1 with cold water before serving.\n2. Fill a tall glass with ice. Add simple syrup if desired and pour in 120ml of cold brew.\n3. Gently place 2 scoops of vanilla ice cream on top. Serve immediately with a spoon and straw.',
     ingredients: [
       { name: 'Coarse ground dark roast coffee', qty: 24, unit: 'g' },
       { name: 'Vanilla ice cream', qty: 100, unit: 'g' },
@@ -540,7 +540,7 @@ const menuItemsData = [
     description: 'Smooth cold brew with rich vanilla ice cream, fanned with an amber caramel sauce.',
     prep_time: 5,
     serving_size: 'Tall Glass (300ml)',
-    instructions: '1. Drizzle caramel sauce around the inside walls of a tall glass.\nFill with ice and pour in 120ml of diluted cold brew (see Recipe 28).\nGently add 2 scoops of vanilla ice cream on top and drizzle caramel sauce over them. Serve immediately.',
+    instructions: '1. Drizzle caramel sauce around the inside walls of a tall glass.\n2. Fill with ice and pour in 120ml of diluted cold brew (see Recipe 28).\n3. Gently add 2 scoops of vanilla ice cream on top and drizzle caramel sauce over them. Serve immediately.',
     ingredients: [
       { name: 'Coarse ground dark roast coffee', qty: 24, unit: 'g' },
       { name: 'Vanilla ice cream', qty: 100, unit: 'g' },
@@ -555,7 +555,7 @@ const menuItemsData = [
     description: 'Decadent combination of cold brew and rich chocolate ice cream topped with syrup.',
     prep_time: 5,
     serving_size: 'Tall Glass (300ml)',
-    instructions: '1. Swirl chocolate sauce around the inside of a tall glass.\nFill with ice and pour in 120ml of diluted cold brew (see Recipe 28).\nAdd 2 scoops of chocolate ice cream on top and drizzle chocolate sauce over them. Serve immediately.',
+    instructions: '1. Swirl chocolate sauce around the inside of a tall glass.\n2. Fill with ice and pour in 120ml of diluted cold brew (see Recipe 28).\n3. Add 2 scoops of chocolate ice cream on top and drizzle chocolate sauce over them. Serve immediately.',
     ingredients: [
       { name: 'Coarse ground dark roast coffee', qty: 24, unit: 'g' },
       { name: 'Chocolate ice cream', qty: 100, unit: 'g' },
@@ -570,7 +570,7 @@ const menuItemsData = [
     description: 'Espresso poured over chilled whole milk and fresh ice.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Pull a double espresso and let it cool for 1–2 minutes.\nFill a tall glass with ice cubes. Pour in 150ml of cold milk.\nSlowly pour the cooled espresso over the milk — it will layer on top before blending.\nStir gently and serve.',
+    instructions: '1. Pull a double espresso and let it cool for 1–2 minutes.\n2. Fill a tall glass with ice cubes. Pour in 150ml of cold milk.\n3. Slowly pour the cooled espresso over the milk — it will layer on top before blending.\n4. Stir gently and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -584,7 +584,7 @@ const menuItemsData = [
     description: 'Chilled iced latte infused with vanilla syrup.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir 15ml of vanilla syrup into 150ml of cold milk until dissolved.\nFill a tall glass with ice, pour in the vanilla milk, then add the cooled espresso on top. Serve with a straw.',
+    instructions: '1. Stir 15ml of vanilla syrup into 150ml of cold milk until dissolved.\n2. Fill a tall glass with ice, pour in the vanilla milk, then add the cooled espresso on top. Serve with a straw.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -599,7 +599,7 @@ const menuItemsData = [
     description: 'Chilled espresso latte with sweet caramel syrup, ice, and caramel drizzle.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir 15ml of caramel syrup into the cold milk. Drizzle caramel sauce inside the glass before adding ice.\nFill with ice, pour in the caramel milk, then add the cooled espresso on top.\nDrizzle caramel sauce over the top and serve.',
+    instructions: '1. Stir 15ml of caramel syrup into the cold milk. Drizzle caramel sauce inside the glass before adding ice.\n2. Fill with ice, pour in the caramel milk, then add the cooled espresso on top.\n3. Drizzle caramel sauce over the top and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -615,7 +615,7 @@ const menuItemsData = [
     description: 'Espresso, cold milk, and hazelnut syrup served refreshing and cold over ice.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir 15ml of hazelnut syrup into the cold milk. Fill a tall glass with ice.\nPour the hazelnut milk over the ice, then add the cooled espresso on top. Serve immediately.',
+    instructions: '1. Stir 15ml of hazelnut syrup into the cold milk. Fill a tall glass with ice.\n2. Pour the hazelnut milk over the ice, then add the cooled espresso on top. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -630,7 +630,7 @@ const menuItemsData = [
     description: 'Chilled espresso latte sweetened with brown sugar syrup and cinnamon dust.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir 15ml of brown sugar syrup into the cold milk.\nFill a tall glass with ice, pour in the brown sugar milk, then add the cooled espresso on top.\nDust lightly with ground cinnamon and serve.',
+    instructions: '1. Stir 15ml of brown sugar syrup into the cold milk.\n2. Fill a tall glass with ice, pour in the brown sugar milk, then add the cooled espresso on top.\n3. Dust lightly with ground cinnamon and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -646,7 +646,7 @@ const menuItemsData = [
     description: 'Chilled microfoam latte with house lavender syrup over ice.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir 15ml of lavender syrup into the cold milk.\nFill a tall glass with ice, pour in the lavender milk, then slowly pour the cooled espresso over the top.\nOptionally garnish with 2–3 dried culinary lavender buds.',
+    instructions: '1. Stir 15ml of lavender syrup into the cold milk.\n2. Fill a tall glass with ice, pour in the lavender milk, then slowly pour the cooled espresso over the top.\n3. Optionally garnish with 2–3 dried culinary lavender buds.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -661,7 +661,7 @@ const menuItemsData = [
     description: 'Delicious chilled espresso latte fanned with pistachio syrup and crushed nuts.',
     prep_time: 4,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir 15ml of pistachio syrup into the cold milk.\nFill a tall glass with ice, pour in the pistachio milk, then add the cooled espresso on top.\nSprinkle crushed pistachios over the surface and serve.',
+    instructions: '1. Stir 15ml of pistachio syrup into the cold milk.\n2. Fill a tall glass with ice, pour in the pistachio milk, then add the cooled espresso on top.\n3. Sprinkle crushed pistachios over the surface and serve.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -676,7 +676,7 @@ const menuItemsData = [
     description: 'Espresso, cold milk, and shaken stiff cold milk foam on top.',
     prep_time: 5,
     serving_size: 'Chilled Glass (250ml)',
-    instructions: '1. Make cold foam: seal 120ml of cold milk in a jar and shake vigorously for 45–60 seconds, or use a handheld cold frother for 30 seconds, until thick and foamy.\nPull espresso and let it cool slightly.\nFill a tall glass with ice. Add 80ml of cold milk, then pour in the espresso.\nSpoon cold foam generously on top and serve immediately.',
+    instructions: '1. Make cold foam: seal 120ml of cold milk in a jar and shake vigorously for 45–60 seconds, or use a handheld cold frother for 30 seconds, until thick and foamy.\n2. Pull espresso and let it cool slightly.\n3. Fill a tall glass with ice. Add 80ml of cold milk, then pour in the espresso.\n4. Spoon cold foam generously on top and serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 160, unit: 'ml' },
@@ -690,7 +690,7 @@ const menuItemsData = [
     description: 'Chilled iced cappuccino sweetened with premium vanilla syrup.',
     prep_time: 5,
     serving_size: 'Chilled Glass (250ml)',
-    instructions: '1. Make cold foam (see Recipe 38). Pull espresso and stir in 10ml of vanilla syrup. Cool slightly.\nFill glass with ice, pour in cold milk, then the vanilla espresso.\nSpoon cold foam generously on top.',
+    instructions: '1. Make cold foam (see Recipe 38). Pull espresso and stir in 10ml of vanilla syrup. Cool slightly.\n2. Fill glass with ice, pour in cold milk, then the vanilla espresso.\n3. Spoon cold foam generously on top.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 160, unit: 'ml' },
@@ -705,7 +705,7 @@ const menuItemsData = [
     description: 'Chilled iced cappuccino with sweet caramel syrup, topped with thick cold foam and drizzle.',
     prep_time: 5,
     serving_size: 'Chilled Glass (250ml)',
-    instructions: '1. Make cold foam (see Recipe 38). Pull espresso and stir in 10ml of caramel syrup. Cool slightly.\nFill glass with ice, pour in cold milk, then the caramel espresso.\nSpoon cold foam on top and finish with a caramel drizzle.',
+    instructions: '1. Make cold foam (see Recipe 38). Pull espresso and stir in 10ml of caramel syrup. Cool slightly.\n2. Fill glass with ice, pour in cold milk, then the caramel espresso.\n3. Spoon cold foam on top and finish with a caramel drizzle.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 160, unit: 'ml' },
@@ -721,7 +721,7 @@ const menuItemsData = [
     description: 'Double espresso blended with premium chocolate sauce, milk, ice, and whipped cream.',
     prep_time: 5,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Pull espresso and stir in chocolate sauce until fully dissolved. Cool for 2 minutes.\nFill a tall glass with ice and pour in 150ml of cold milk.\nAdd the chocolate espresso over the milk. Top with whipped cream and a drizzle of chocolate sauce.',
+    instructions: '1. Pull espresso and stir in chocolate sauce until fully dissolved. Cool for 2 minutes.\n2. Fill a tall glass with ice and pour in 150ml of cold milk.\n3. Add the chocolate espresso over the milk. Top with whipped cream and a drizzle of chocolate sauce.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -737,7 +737,7 @@ const menuItemsData = [
     description: 'Espresso mocha with chocolate sauce, hazelnut syrup, cold milk, and whipped cream.',
     prep_time: 5,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir chocolate sauce and hazelnut syrup into the pulled espresso until smooth. Cool briefly.\nFill a glass with ice, pour in cold milk, then add the hazelnut-chocolate espresso.\nTop with whipped cream and a drizzle of chocolate or hazelnut sauce.',
+    instructions: '1. Stir chocolate sauce and hazelnut syrup into the pulled espresso until smooth. Cool briefly.\n2. Fill a glass with ice, pour in cold milk, then add the hazelnut-chocolate espresso.\n3. Top with whipped cream and a drizzle of chocolate or hazelnut sauce.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -754,7 +754,7 @@ const menuItemsData = [
     description: 'Decadent iced mocha with chocolate, caramel syrup, whipped cream, and caramel drizzle.',
     prep_time: 5,
     serving_size: 'Chilled Glass (300ml)',
-    instructions: '1. Stir chocolate sauce and caramel syrup into the pulled espresso until smooth. Cool briefly.\nDrizzle caramel inside the glass, fill with ice, pour in cold milk, then add the espresso blend.\nTop with whipped cream and a caramel drizzle.',
+    instructions: '1. Stir chocolate sauce and caramel syrup into the pulled espresso until smooth. Cool briefly.\n2. Drizzle caramel inside the glass, fill with ice, pour in cold milk, then add the espresso blend.\n3. Top with whipped cream and a caramel drizzle.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -772,7 +772,7 @@ const menuItemsData = [
     description: 'Rich espresso poured over ice and cold filtered water.',
     prep_time: 3,
     serving_size: 'Chilled Glass (250ml)',
-    instructions: '1. Fill a tall glass with ice cubes, then pour in 120ml of cold water.\nPull a double espresso and pour it slowly over the water and ice — it will float on top, creating a natural layered effect. Serve without stirring.',
+    instructions: '1. Fill a tall glass with ice cubes, then pour in 120ml of cold water.\n2. Pull a double espresso and pour it slowly over the water and ice — it will float on top, creating a natural layered effect. Serve without stirring.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 120, unit: 'ml' },
@@ -786,7 +786,7 @@ const menuItemsData = [
     description: 'Cold water and double espresso sweetened with premium vanilla syrup over ice.',
     prep_time: 3,
     serving_size: 'Chilled Glass (250ml)',
-    instructions: '1. Stir 10ml of vanilla syrup into 120ml of cold water. Fill a tall glass with ice.\nPour the vanilla water over the ice, then slowly pour the espresso on top. Serve immediately.',
+    instructions: '1. Stir 10ml of vanilla syrup into 120ml of cold water. Fill a tall glass with ice.\n2. Pour the vanilla water over the ice, then slowly pour the espresso on top. Serve immediately.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Filtered water', qty: 120, unit: 'ml' },
@@ -801,7 +801,7 @@ const menuItemsData = [
     description: 'Vanilla syrup and cold milk layered with fresh espresso and ice.',
     prep_time: 4,
     serving_size: 'Chilled Glass (240ml)',
-    instructions: '1. Add 15ml of vanilla syrup to the bottom of a tall clear glass.\nFill with ice, then pour in 150ml of cold milk.\nPull espresso and pour slowly over the back of a spoon so it layers on top of the milk. Serve without stirring.',
+    instructions: '1. Add 15ml of vanilla syrup to the bottom of a tall clear glass.\n2. Fill with ice, then pour in 150ml of cold milk.\n3. Pull espresso and pour slowly over the back of a spoon so it layers on top of the milk. Serve without stirring.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -816,7 +816,7 @@ const menuItemsData = [
     description: 'Traditional layered iced macchiato topped with a rich crosshatch of thick caramel drizzle.',
     prep_time: 4,
     serving_size: 'Chilled Glass (240ml)',
-    instructions: '1. Add 15ml of vanilla syrup to the bottom of a tall clear glass. Fill with ice, pour in cold milk.\nPull espresso and pour over the back of a spoon to layer on top.\nDrizzle caramel sauce over the espresso layer. Serve without stirring.',
+    instructions: '1. Add 15ml of vanilla syrup to the bottom of a tall clear glass. Fill with ice, pour in cold milk.\n2. Pull espresso and pour over the back of a spoon to layer on top.\n3. Drizzle caramel sauce over the espresso layer. Serve without stirring.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -832,7 +832,7 @@ const menuItemsData = [
     description: 'Chilled premium vanilla ice cream drowned in a hot double shot of espresso.',
     prep_time: 2,
     serving_size: 'Dessert Dish (120ml)',
-    instructions: '1. Pre-chill a small bowl or glass in the freezer for a few minutes.\nScoop 2 portions of vanilla ice cream (or gelato) into the chilled dish.\nPull a fresh, hot espresso shot and pour it immediately over the ice cream. Serve at once with a spoon.',
+    instructions: '1. Pre-chill a small bowl or glass in the freezer for a few minutes.\n2. Scoop 2 portions of vanilla ice cream (or gelato) into the chilled dish.\n3. Pull a fresh, hot espresso shot and pour it immediately over the ice cream. Serve at once with a spoon.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Vanilla ice cream', qty: 100, unit: 'g' }
@@ -845,7 +845,7 @@ const menuItemsData = [
     description: 'Creamy vanilla ice cream drowned in hot espresso fanned with sweet caramel syrup.',
     prep_time: 2,
     serving_size: 'Dessert Dish (120ml)',
-    instructions: '1. Pre-chill a serving dish. Scoop in 2 portions of vanilla ice cream.\nPull espresso and stir in 5ml of caramel syrup until dissolved.\nPour the caramel espresso immediately over the ice cream. Optionally add a drizzle of caramel sauce on top.',
+    instructions: '1. Pre-chill a serving dish. Scoop in 2 portions of vanilla ice cream.\n2. Pull espresso and stir in 5ml of caramel syrup until dissolved.\n3. Pour the caramel espresso immediately over the ice cream. Optionally add a drizzle of caramel sauce on top.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Vanilla ice cream', qty: 100, unit: 'g' },
@@ -859,7 +859,7 @@ const menuItemsData = [
     description: 'Decadent chocolate ice cream drowned in bold hot espresso and chocolate drizzle.',
     prep_time: 2,
     serving_size: 'Dessert Dish (120ml)',
-    instructions: '1. Pre-chill a bowl. Scoop 2 portions of chocolate ice cream into it and drizzle with chocolate sauce.\nPull a hot espresso and pour immediately over the scoops. Serve at once.\n2. FRAPPUCCINO',
+    instructions: '1. Pre-chill a bowl. Scoop 2 portions of chocolate ice cream into it and drizzle with chocolate sauce.\n2. Pull a hot espresso and pour immediately over the scoops. Serve at once.\n3. FRAPPUCCINO',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Chocolate ice cream', qty: 100, unit: 'g' },
@@ -875,7 +875,7 @@ const menuItemsData = [
     description: 'Rich coffee and milk blended with ice and topped with whipped cream.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Pull espresso and allow it to cool to room temperature (hot espresso makes frappuccinos watery).\nAdd cooled espresso, milk, simple syrup, and ice to a blender. Blend on high for 30–45 seconds until completely smooth and thick with no ice chunks.\nPour into a tall cup, top with whipped cream, and serve immediately with a wide straw.',
+    instructions: '1. Pull espresso and allow it to cool to room temperature (hot espresso makes frappuccinos watery).\n2. Add cooled espresso, milk, simple syrup, and ice to a blender. Blend on high for 30–45 seconds until completely smooth and thick with no ice chunks.\n3. Pour into a tall cup, top with whipped cream, and serve immediately with a wide straw.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -891,7 +891,7 @@ const menuItemsData = [
     description: 'Sweet, creamy vanilla frappuccino topped with whipped cream and vanilla drizzle.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Cool the espresso. Blend with milk, vanilla syrup, and ice for 30–45 seconds until smooth and thick.\nPour into a cup, top with whipped cream, and drizzle vanilla syrup on top.',
+    instructions: '1. Cool the espresso. Blend with milk, vanilla syrup, and ice for 30–45 seconds until smooth and thick.\n2. Pour into a cup, top with whipped cream, and drizzle vanilla syrup on top.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -907,7 +907,7 @@ const menuItemsData = [
     description: 'Nutty, rich frappuccino fanned with hazelnut syrup and whipped cream.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Cool the espresso. Blend with milk, hazelnut syrup, and ice for 30–45 seconds until smooth.\nPour into a cup, top with whipped cream, and finish with a hazelnut or chocolate drizzle.',
+    instructions: '1. Cool the espresso. Blend with milk, hazelnut syrup, and ice for 30–45 seconds until smooth.\n2. Pour into a cup, top with whipped cream, and finish with a hazelnut or chocolate drizzle.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -923,7 +923,7 @@ const menuItemsData = [
     description: 'Frappuccino blended with sweet brown sugar, milk, ice, and finished with a pinch of cinnamon.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Cool the espresso. Blend with milk, brown sugar syrup, cinnamon, and ice for 30–45 seconds until smooth.\nPour into a cup, top with whipped cream, and dust with ground cinnamon.',
+    instructions: '1. Cool the espresso. Blend with milk, brown sugar syrup, cinnamon, and ice for 30–45 seconds until smooth.\n2. Pour into a cup, top with whipped cream, and dust with ground cinnamon.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -940,7 +940,7 @@ const menuItemsData = [
     description: 'Chilled frappe with rich toffee syrup, frothed cream, and toffee bits drizzle.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Cool the espresso. Blend with milk, toffee syrup, and ice for 30–45 seconds until smooth.\nPour into a cup, top with whipped cream, and drizzle with toffee sauce.',
+    instructions: '1. Cool the espresso. Blend with milk, toffee syrup, and ice for 30–45 seconds until smooth.\n2. Pour into a cup, top with whipped cream, and drizzle with toffee sauce.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -956,7 +956,7 @@ const menuItemsData = [
     description: 'Thick, frosty chocolate and coffee frappe topped with fluffy whipped cream.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Cool the espresso and stir in the chocolate sauce until dissolved. Blend with milk and ice for 30–45 seconds until smooth.\nPour into a cup, top with whipped cream, and drizzle chocolate sauce on top.',
+    instructions: '1. Cool the espresso and stir in the chocolate sauce until dissolved. Blend with milk and ice for 30–45 seconds until smooth.\n2. Pour into a cup, top with whipped cream, and drizzle chocolate sauce on top.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -972,7 +972,7 @@ const menuItemsData = [
     description: 'Double chocolate and rich caramel sauce blended together with espresso and ice.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Drizzle caramel sauce inside the cup walls and refrigerate while you blend.\nCool the espresso. Blend with chocolate sauce, caramel sauce, milk, and ice for 30–45 seconds until smooth.\nPour into the pre-drizzled cup, top with whipped cream, and finish with a caramel drizzle.',
+    instructions: '1. Drizzle caramel sauce inside the cup walls and refrigerate while you blend.\n2. Cool the espresso. Blend with chocolate sauce, caramel sauce, milk, and ice for 30–45 seconds until smooth.\n3. Pour into the pre-drizzled cup, top with whipped cream, and finish with a caramel drizzle.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -989,7 +989,7 @@ const menuItemsData = [
     description: 'Chilled caramel-infused frappe, drizzled dynamically along inside walls.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Drizzle caramel sauce inside the cup walls.\nCool the espresso. Blend with caramel, milk, and ice for 30–45 seconds until smooth.\nPour into the caramel-drizzled cup, top with whipped cream, and add extra caramel drizzle.',
+    instructions: '1. Drizzle caramel sauce inside the cup walls.\n2. Cool the espresso. Blend with caramel, milk, and ice for 30–45 seconds until smooth.\n3. Pour into the caramel-drizzled cup, top with whipped cream, and add extra caramel drizzle.',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -1006,7 +1006,7 @@ const menuItemsData = [
     description: 'Premium salted caramel frappe finished with dynamic sea salt grains.',
     prep_time: 5,
     serving_size: 'Frappe Cup (350ml)',
-    instructions: '1. Cool the espresso. Blend with caramel syrup, milk, and ice for 30–45 seconds until smooth.\nPour into a cup, top with whipped cream, drizzle caramel over the top, and finish with a pinch of flaky sea salt.\n2. REFRESHING DRINKS',
+    instructions: '1. Cool the espresso. Blend with caramel syrup, milk, and ice for 30–45 seconds until smooth.\n2. Pour into a cup, top with whipped cream, drizzle caramel over the top, and finish with a pinch of flaky sea salt.\n3. REFRESHING DRINKS',
     ingredients: [
       { name: 'Espresso coffee beans', qty: 18, unit: 'g' },
       { name: 'Whole milk', qty: 150, unit: 'ml' },
@@ -1025,7 +1025,7 @@ const menuItemsData = [
     description: 'Chilled lime juice and sweet grenadine syrup topped with sparkling soda water.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add syrup and fresh lime juice to the bottom of a tall glass — do not stir.\nFill with ice cubes, then slowly pour soda water over the top. Do not stir — let the natural swirling create a gradient from red at the bottom to clear on top.\nGarnish with a lime wheel on the rim and a mint sprig. Serve with a straw.',
+    instructions: '1. Add syrup and fresh lime juice to the bottom of a tall glass — do not stir.\n2. Fill with ice cubes, then slowly pour soda water over the top. Do not stir — let the natural swirling create a gradient from red at the bottom to clear on top.\n3. Garnish with a lime wheel on the rim and a mint sprig. Serve with a straw.',
     ingredients: [
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
       { name: 'Grenadine', qty: 20, unit: 'ml' },
@@ -1040,7 +1040,7 @@ const menuItemsData = [
     description: 'Chilled lime and fragrant rose syrup fanned with dried rose petals.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add rose syrup and lime juice to a tall glass. Fill with ice.\nPour soda water slowly over the ice — do not stir.\nScatter a few dried food-safe rose petals on the surface and add a lime wheel to the rim.',
+    instructions: '1. Add rose syrup and lime juice to a tall glass. Fill with ice.\n2. Pour soda water slowly over the ice — do not stir.\n3. Scatter a few dried food-safe rose petals on the surface and add a lime wheel to the rim.',
     ingredients: [
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
       { name: 'Rose syrup', qty: 20, unit: 'ml' },
@@ -1056,7 +1056,7 @@ const menuItemsData = [
     description: 'Refreshing raspberry syrup and fresh lime juice topped with sparkling soda.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add raspberry syrup and lime juice to a tall glass. Fill with ice.\nPour soda water slowly over the ice without stirring.\nGarnish with fresh raspberries on a skewer or floating on top and a lime wheel on the rim.',
+    instructions: '1. Add raspberry syrup and lime juice to a tall glass. Fill with ice.\n2. Pour soda water slowly over the ice without stirring.\n3. Garnish with fresh raspberries on a skewer or floating on top and a lime wheel on the rim.',
     ingredients: [
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
       { name: 'Raspberry syrup', qty: 20, unit: 'ml' },
@@ -1071,7 +1071,7 @@ const menuItemsData = [
     description: 'Muddled fresh strawberries and basil leaves with lime and sparkling soda.',
     prep_time: 5,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Hull and halve the strawberries. Place them in the glass with the basil leaves and simple syrup.\nMuddle firmly 8–10 times with a muddler or the back of a spoon — crush the strawberries and bruise the basil to release the oils. Add lime juice.\nFill with ice, then pour soda water slowly over the top. Garnish with a basil sprig and strawberry slice.',
+    instructions: '1. Hull and halve the strawberries. Place them in the glass with the basil leaves and simple syrup.\n2. Muddle firmly 8–10 times with a muddler or the back of a spoon — crush the strawberries and bruise the basil to release the oils. Add lime juice.\n3. Fill with ice, then pour soda water slowly over the top. Garnish with a basil sprig and strawberry slice.',
     ingredients: [
       { name: 'Fresh strawberries', qty: 0.05, unit: 'kg' },
       { name: 'Fresh basil', qty: 3, unit: 'g' },
@@ -1088,7 +1088,7 @@ const menuItemsData = [
     description: 'Fast preparation version using strawberry syrup and fresh frothed basil.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add strawberry syrup, basil syrup, and lime juice to the glass and stir briefly. If using fresh basil instead, muddle 3 leaves in the glass first.\nFill with ice and slowly pour soda water over the top. Garnish with a basil leaf.',
+    instructions: '1. Add strawberry syrup, basil syrup, and lime juice to the glass and stir briefly. If using fresh basil instead, muddle 3 leaves in the glass first.\n2. Fill with ice and slowly pour soda water over the top. Garnish with a basil leaf.',
     ingredients: [
       { name: 'Strawberry syrup', qty: 25, unit: 'ml' },
       { name: 'Fresh basil', qty: 2, unit: 'g' },
@@ -1104,7 +1104,7 @@ const menuItemsData = [
     description: 'A blue gradient refresher combining non-alcoholic curacao, coconut, and lime.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add blue curacao syrup, coconut syrup, and lime juice to the bottom of a tall clear glass. Stir to combine.\nFill with ice cubes, then pour soda water very slowly over the ice to create a blue gradient effect.\nGarnish with a lime wheel. Serve without stirring — the layers are the presentation.',
+    instructions: '1. Add blue curacao syrup, coconut syrup, and lime juice to the bottom of a tall clear glass. Stir to combine.\n2. Fill with ice cubes, then pour soda water very slowly over the ice to create a blue gradient effect.\n3. Garnish with a lime wheel. Serve without stirring — the layers are the presentation.',
     ingredients: [
       { name: 'Blue curacao syrup (non-alcoholic)', qty: 15, unit: 'ml' },
       { name: 'Coconut syrup', qty: 15, unit: 'ml' },
@@ -1120,7 +1120,7 @@ const menuItemsData = [
     description: 'Tropical layers of sweet mango, blue curacao, lime, and sparkling soda.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Pour mango syrup to the very bottom of a tall clear glass — it is the densest and forms the yellow base layer.\nAdd ice and lime juice, then gently pour in the blue curacao.\nPour soda water very slowly over the top to preserve the tropical yellow-to-blue gradient. Serve without stirring.',
+    instructions: '1. Pour mango syrup to the very bottom of a tall clear glass — it is the densest and forms the yellow base layer.\n2. Add ice and lime juice, then gently pour in the blue curacao.\n3. Pour soda water very slowly over the top to preserve the tropical yellow-to-blue gradient. Serve without stirring.',
     ingredients: [
       { name: 'Mango syrup', qty: 20, unit: 'ml' },
       { name: 'Blue curacao syrup (non-alcoholic)', qty: 15, unit: 'ml' },
@@ -1136,7 +1136,7 @@ const menuItemsData = [
     description: 'Refreshing peach soda fanned with a heavy floating layer of sweetened heavy cream.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add peach syrup and lime juice to a tall glass and stir. Fill with ice.\nPour soda water gently over the ice.\nHold a large spoon upside down just above the surface and slowly pour the cream over the back of it so it floats on top without sinking. The cream swirling down is the "dirty" effect. Serve immediately with a straw.',
+    instructions: '1. Add peach syrup and lime juice to a tall glass and stir. Fill with ice.\n2. Pour soda water gently over the ice.\n3. Hold a large spoon upside down just above the surface and slowly pour the cream over the back of it so it floats on top without sinking. The cream swirling down is the "dirty" effect. Serve immediately with a straw.',
     ingredients: [
       { name: 'Peach syrup', qty: 25, unit: 'ml' },
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
@@ -1152,7 +1152,7 @@ const menuItemsData = [
     description: 'Chilled strawberry lime soda fanned with a heavy floating layer of heavy cream.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add strawberry syrup and lime juice to the glass. Fill with ice and pour soda water gently over the top.\nFloat 30ml of heavy cream using the back-of-spoon technique (see Recipe 67). Serve immediately.',
+    instructions: '1. Add strawberry syrup and lime juice to the glass. Fill with ice and pour soda water gently over the top.\n2. Float 30ml of heavy cream using the back-of-spoon technique (see Recipe 67). Serve immediately.',
     ingredients: [
       { name: 'Strawberry syrup', qty: 25, unit: 'ml' },
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
@@ -1168,7 +1168,7 @@ const menuItemsData = [
     description: 'A tropical passionfruit soda topped with rich floating coconut cream.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add passionfruit syrup and lime juice to the glass. Fill with ice and top with soda water.\nFloat 30ml of coconut cream using the back-of-spoon method (see Recipe 67). Coconut cream creates a thicker, more dramatic float. Serve immediately.',
+    instructions: '1. Add passionfruit syrup and lime juice to the glass. Fill with ice and top with soda water.\n2. Float 30ml of coconut cream using the back-of-spoon method (see Recipe 67). Coconut cream creates a thicker, more dramatic float. Serve immediately.',
     ingredients: [
       { name: 'Passionfruit syrup', qty: 25, unit: 'ml' },
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
@@ -1184,7 +1184,7 @@ const menuItemsData = [
     description: 'Fruity raspberry lime soda fanned with a floating layer of heavy cream.',
     prep_time: 3,
     serving_size: 'Soda Glass (250ml)',
-    instructions: '1. Add raspberry syrup and lime juice to an iced glass. Top with soda water.\nFloat 30ml of heavy cream using the back-of-spoon technique (see Recipe 67). Serve immediately.\n2. ADD-ONS / EXTRA ITEMS',
+    instructions: '1. Add raspberry syrup and lime juice to an iced glass. Top with soda water.\n2. Float 30ml of heavy cream using the back-of-spoon technique (see Recipe 67). Serve immediately.\n3. ADD-ONS / EXTRA ITEMS',
     ingredients: [
       { name: 'Raspberry syrup', qty: 25, unit: 'ml' },
       { name: 'Limes (fresh)', qty: 1, unit: 'piece' },
@@ -1202,7 +1202,7 @@ const menuItemsData = [
     description: 'Decadent milk frothed together with dark cocoa and chopped chocolates.',
     prep_time: 5,
     serving_size: 'Mug (280ml)',
-    instructions: '1. Chop the chocolate finely so it melts evenly. Heat 250ml of whole milk in a saucepan over medium-low heat until just simmering (small bubbles at the edges, ~75–80°C) — do not boil.\nRemove from heat and whisk in the chopped chocolate and cocoa powder until completely smooth. Add 1–2 tsp of sugar to taste.\nPour into a pre-warmed mug. Top with whipped cream and dust with cocoa powder.',
+    instructions: '1. Chop the chocolate finely so it melts evenly. Heat 250ml of whole milk in a saucepan over medium-low heat until just simmering (small bubbles at the edges, ~75–80°C) — do not boil.\n2. Remove from heat and whisk in the chopped chocolate and cocoa powder until completely smooth. Add 1–2 tsp of sugar to taste.\n3. Pour into a pre-warmed mug. Top with whipped cream and dust with cocoa powder.',
     ingredients: [
       { name: 'Whole milk', qty: 250, unit: 'ml' },
       { name: 'Dark chocolate (70% cocoa)', qty: 0.04, unit: 'kg' },
@@ -1217,7 +1217,7 @@ const menuItemsData = [
     description: 'Choco-hazelnut frothed milk topped with whipped cream and drizzle.',
     prep_time: 5,
     serving_size: 'Mug (280ml)',
-    instructions: '1. Heat milk to just simmering. Remove from heat and whisk in chopped milk chocolate and cocoa until smooth.\nStir in 15ml of hazelnut syrup. Pour into a pre-warmed mug.\nTop with whipped cream and finish with a hazelnut drizzle and optional crushed hazelnuts.',
+    instructions: '1. Heat milk to just simmering. Remove from heat and whisk in chopped milk chocolate and cocoa until smooth.\n2. Stir in 15ml of hazelnut syrup. Pour into a pre-warmed mug.\n3. Top with whipped cream and finish with a hazelnut drizzle and optional crushed hazelnuts.',
     ingredients: [
       { name: 'Whole milk', qty: 250, unit: 'ml' },
       { name: 'Milk chocolate', qty: 0.04, unit: 'kg' },
@@ -1233,7 +1233,7 @@ const menuItemsData = [
     description: 'Rich hot chocolate frothed with caramel syrup and whipped cream.',
     prep_time: 5,
     serving_size: 'Mug (280ml)',
-    instructions: '1. Heat milk to just simmering. Whisk in chocolate and cocoa until smooth.\nStir in 15ml of caramel syrup. Pour into a pre-warmed mug.\nTop with whipped cream and drizzle caramel sauce on top.',
+    instructions: '1. Heat milk to just simmering. Whisk in chocolate and cocoa until smooth.\n2. Stir in 15ml of caramel syrup. Pour into a pre-warmed mug.\n3. Top with whipped cream and drizzle caramel sauce on top.',
     ingredients: [
       { name: 'Whole milk', qty: 250, unit: 'ml' },
       { name: 'Milk chocolate', qty: 0.04, unit: 'kg' },
@@ -1250,7 +1250,7 @@ const menuItemsData = [
     description: 'Fragrant peppermint-infused dark frothed chocolate topped with fresh whipped cream.',
     prep_time: 5,
     serving_size: 'Mug (280ml)',
-    instructions: '1. Heat milk to just simmering. Whisk in dark chocolate (70%+ works best with mint) and cocoa until smooth.\nStir in 10ml of mint syrup — start with 8ml and taste, as mint can overpower quickly.\nPour into a pre-warmed mug. Top with whipped cream and a fresh mint leaf.\n2. LIGHT BITES',
+    instructions: '1. Heat milk to just simmering. Whisk in dark chocolate (70%+ works best with mint) and cocoa until smooth.\n2. Stir in 10ml of mint syrup — start with 8ml and taste, as mint can overpower quickly.\n3. Pour into a pre-warmed mug. Top with whipped cream and a fresh mint leaf.\n4. LIGHT BITES',
     ingredients: [
       { name: 'Whole milk', qty: 250, unit: 'ml' },
       { name: 'Dark chocolate (70% cocoa)', qty: 0.04, unit: 'kg' },
@@ -1268,7 +1268,7 @@ const menuItemsData = [
     description: 'Soft and fluffy base vanilla cupcake with premium buttercream icing.',
     prep_time: 35,
     serving_size: '1 Piece',
-    instructions: '1. Preheat oven to 175°C. Line a 12-hole muffin tray with paper liners.\nBeat softened butter and sugar together with a mixer for 4–5 minutes until pale and fluffy. (Butter must be at room temperature — not melted.)\nAdd eggs one at a time, mixing well after each. Mix in vanilla extract.\nSift together flour, baking powder, and salt. Add the dry ingredients and milk alternately to the butter mixture in 3 parts (dry–wet–dry), mixing on low. Stop as soon as combined — do not overmix.\nDivide batter evenly into the liners, filling each ⅔ full. Bake 18–20 minutes until golden and a toothpick inserted in the centre comes out clean.\nCool completely on a wire rack before frosting with vanilla buttercream.\nSyrup soak tip: Poke holes in baked cupcakes and drizzle 1 tsp of vanilla, lavender, or rose syrup over each while still warm for extra moisture.',
+    instructions: '1. Preheat oven to 175°C. Line a 12-hole muffin tray with paper liners.\n2. Beat softened butter and sugar together with a mixer for 4–5 minutes until pale and fluffy. (Butter must be at room temperature — not melted.)\n3. Add eggs one at a time, mixing well after each. Mix in vanilla extract.\n4. Sift together flour, baking powder, and salt. Add the dry ingredients and milk alternately to the butter mixture in 3 parts (dry–wet–dry), mixing on low. Stop as soon as combined — do not overmix.\n5. Divide batter evenly into the liners, filling each ⅔ full. Bake 18–20 minutes until golden and a toothpick inserted in the centre comes out clean.\n6. Cool completely on a wire rack before frosting with vanilla buttercream.\nSyrup soak tip: Poke holes in baked cupcakes and drizzle 1 tsp of vanilla, lavender, or rose syrup over each while still warm for extra moisture.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.015, unit: 'kg' },
       { name: 'White sugar / caster sugar', qty: 0.0125, unit: 'kg' },
@@ -1286,7 +1286,7 @@ const menuItemsData = [
     description: 'Delicate floral cupcake infused with rose syrup and pink rose-flavored frosting.',
     prep_time: 35,
     serving_size: '1 Piece',
-    instructions: '1. Make the base batter (Recipe 75), replacing vanilla extract with 15ml of rose syrup.\nBake at 175°C for 18–20 minutes. Cool completely.\nBeat 100g of softened butter until pale. Gradually add 200g of sifted icing sugar, then 10ml of rose syrup and a few drops of pink food colouring. Beat until light and fluffy. Pipe onto cooled cupcakes in a swirl rosette.\nGarnish with a dried food-safe rose petal on each cupcake.',
+    instructions: '1. Make the base batter (Recipe 75), replacing vanilla extract with 15ml of rose syrup.\n2. Bake at 175°C for 18–20 minutes. Cool completely.\n3. Beat 100g of softened butter until pale. Gradually add 200g of sifted icing sugar, then 10ml of rose syrup and a few drops of pink food colouring. Beat until light and fluffy. Pipe onto cooled cupcakes in a swirl rosette.\n4. Garnish with a dried food-safe rose petal on each cupcake.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.015, unit: 'kg' },
       { name: 'White sugar / caster sugar', qty: 0.0125, unit: 'kg' },
@@ -1304,7 +1304,7 @@ const menuItemsData = [
     description: 'A calming cupcake infused with lavender syrup, fanned with purple lavender icing.',
     prep_time: 35,
     serving_size: '1 Piece',
-    instructions: '1. Make the base batter (Recipe 75), replacing vanilla with 15ml of lavender syrup.\nBake at 175°C for 18–20 minutes. Cool completely.\nBeat 100g of softened butter, add 200g of icing sugar gradually, then 10ml of lavender syrup and a few drops of purple food colouring. Beat until fluffy. Pipe onto cooled cupcakes.\nGarnish with 2–3 dried culinary lavender buds on top of each cupcake.',
+    instructions: '1. Make the base batter (Recipe 75), replacing vanilla with 15ml of lavender syrup.\n2. Bake at 175°C for 18–20 minutes. Cool completely.\n3. Beat 100g of softened butter, add 200g of icing sugar gradually, then 10ml of lavender syrup and a few drops of purple food colouring. Beat until fluffy. Pipe onto cooled cupcakes.\n4. Garnish with 2–3 dried culinary lavender buds on top of each cupcake.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.015, unit: 'kg' },
       { name: 'White sugar / caster sugar', qty: 0.0125, unit: 'kg' },
@@ -1323,7 +1323,7 @@ const menuItemsData = [
     description: 'Rich dark chocolate cupcake frosted with velvety chocolate ganache.',
     prep_time: 35,
     serving_size: '1 Piece',
-    instructions: '1. Preheat oven to 175°C and line a muffin tray with liners.\nFollow the base cupcake method (Recipe 75), but sift the cocoa powder in with the flour. Use a good-quality cocoa powder for a richer flavour.\nFill liners ⅔ full and bake for 18–20 minutes. Cool completely.\nFrost with chocolate ganache (heat 120ml cream, pour over 120g chopped dark chocolate, wait 2 minutes, then stir smooth and cool until spreadable) or chocolate buttercream.',
+    instructions: '1. Preheat oven to 175°C and line a muffin tray with liners.\n2. Follow the base cupcake method (Recipe 75), but sift the cocoa powder in with the flour. Use a good-quality cocoa powder for a richer flavour.\n3. Fill liners ⅔ full and bake for 18–20 minutes. Cool completely.\n4. Frost with chocolate ganache (heat 120ml cream, pour over 120g chopped dark chocolate, wait 2 minutes, then stir smooth and cool until spreadable) or chocolate buttercream.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.0125, unit: 'kg' },
       { name: 'Cocoa powder', qty: 3, unit: 'g' },
@@ -1340,7 +1340,7 @@ const menuItemsData = [
     description: 'Perfect classic soft and chewy chocolate chip cookie served fresh.',
     prep_time: 30,
     serving_size: '1 Piece',
-    instructions: '1. Beat softened butter with both sugars for 3–4 minutes until creamy. Add the whole egg, egg yolk, and vanilla and mix until combined. (The extra yolk adds richness and chewiness.)\nMix in flour, baking soda, and salt on low speed until just combined. Fold in chocolate chips by hand.\nCover and refrigerate the dough for 30 minutes — this prevents spreading and gives a thicker, chewier cookie.\nPreheat oven to 165°C. Line baking trays with parchment. Scoop dough into ~50g balls with 5cm spacing.\nBake 11–13 minutes until edges are set and golden but the centres still look slightly soft. They will firm up as they cool. Rest on the tray for 5 minutes before transferring.',
+    instructions: '1. Beat softened butter with both sugars for 3–4 minutes until creamy. Add the whole egg, egg yolk, and vanilla and mix until combined. (The extra yolk adds richness and chewiness.)\n2. Mix in flour, baking soda, and salt on low speed until just combined. Fold in chocolate chips by hand.\n3. Cover and refrigerate the dough for 30 minutes — this prevents spreading and gives a thicker, chewier cookie.\n4. Preheat oven to 165°C. Line baking trays with parchment. Scoop dough into ~50g balls with 5cm spacing.\n5. Bake 11–13 minutes until edges are set and golden but the centres still look slightly soft. They will firm up as they cool. Rest on the tray for 5 minutes before transferring.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.013, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.01, unit: 'kg' },
@@ -1357,7 +1357,7 @@ const menuItemsData = [
     description: 'Soft chewy cookie infused with instant espresso powder and white chocolate chips.',
     prep_time: 30,
     serving_size: '1 Piece',
-    instructions: '1. Make the base cookie dough (Recipe 79, omitting chocolate chips). Add 1.5 tsp of instant espresso powder when creaming the butter and sugar — it dissolves into the fat and flavours the whole dough.\nFold in 100g of white chocolate chips. The sweetness of the white chocolate balances the bitter espresso.\nChill, scoop, and bake exactly as per Recipe 79.',
+    instructions: '1. Make the base cookie dough (Recipe 79, omitting chocolate chips). Add 1.5 tsp of instant espresso powder when creaming the butter and sugar — it dissolves into the fat and flavours the whole dough.\n2. Fold in 100g of white chocolate chips. The sweetness of the white chocolate balances the bitter espresso.\n3. Chill, scoop, and bake exactly as per Recipe 79.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.013, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.01, unit: 'kg' },
@@ -1375,7 +1375,7 @@ const menuItemsData = [
     description: 'Warm chewy cookies fanned with elegant swirls of hazelnut spread.',
     prep_time: 30,
     serving_size: '1 Piece',
-    instructions: '1. Make and chill the base cookie dough (Recipe 79, omitting chips).\nDrop 8–10 teaspoon-sized blobs of hazelnut spread across the dough. Fold 2–3 times only — you want visible swirls, not a fully blended dough.\nScoop and bake as per Recipe 79. The hazelnut will create gooey pockets inside the baked cookies.',
+    instructions: '1. Make and chill the base cookie dough (Recipe 79, omitting chips).\n2. Drop 8–10 teaspoon-sized blobs of hazelnut spread across the dough. Fold 2–3 times only — you want visible swirls, not a fully blended dough.\n3. Scoop and bake as per Recipe 79. The hazelnut will create gooey pockets inside the baked cookies.',
     ingredients: [
       { name: 'All-purpose flour', qty: 0.013, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.01, unit: 'kg' },
@@ -1392,7 +1392,7 @@ const menuItemsData = [
     description: 'Decadent, rich dark chocolate fudgy brownie served warm.',
     prep_time: 40,
     serving_size: '1 Slice',
-    instructions: '1. Preheat oven to 175°C. Line an 8×8 inch tin with parchment paper.\nMelt chocolate and butter together (double boiler or microwave in 30-second bursts), stirring until smooth. Cool for 5 minutes.\nWhisk in sugar until combined. Add eggs one at a time, whisking well after each — this builds the crinkly top. Stir in vanilla.\nFold in sifted flour, cocoa powder, and salt with a spatula until just combined. Do not overmix.\nPour into the tin and bake for 22–25 minutes. The edges should be set but the centre should still look slightly wobbly — it will firm up as it cools. A toothpick should come out with moist crumbs, not wet batter.\nCool completely in the tin (at least 1 hour) before cutting for clean, fudgy squares.',
+    instructions: '1. Preheat oven to 175°C. Line an 8×8 inch tin with parchment paper.\n2. Melt chocolate and butter together (double boiler or microwave in 30-second bursts), stirring until smooth. Cool for 5 minutes.\n3. Whisk in sugar until combined. Add eggs one at a time, whisking well after each — this builds the crinkly top. Stir in vanilla.\n4. Fold in sifted flour, cocoa powder, and salt with a spatula until just combined. Do not overmix.\n5. Pour into the tin and bake for 22–25 minutes. The edges should be set but the centre should still look slightly wobbly — it will firm up as it cools. A toothpick should come out with moist crumbs, not wet batter.\n6. Cool completely in the tin (at least 1 hour) before cutting for clean, fudgy squares.',
     ingredients: [
       { name: 'Dark chocolate (70% cocoa)', qty: 0.011, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.007, unit: 'kg' },
@@ -1409,7 +1409,7 @@ const menuItemsData = [
     description: 'Fudgy chocolate brownie swirled beautifully with sweet caramel sauce.',
     prep_time: 40,
     serving_size: '1 Slice',
-    instructions: '1. Make the full brownie batter (Recipe 82) and pour into the lined tin.\nDrop 3 tablespoons of caramel sauce across the surface. Use a toothpick to swirl it through the batter in a figure-8 pattern — 4–5 swirls only.\nBake at 175°C for 22–25 minutes. Cool completely before cutting.',
+    instructions: '1. Make the full brownie batter (Recipe 82) and pour into the lined tin.\n2. Drop 3 tablespoons of caramel sauce across the surface. Use a toothpick to swirl it through the batter in a figure-8 pattern — 4–5 swirls only.\n3. Bake at 175°C for 22–25 minutes. Cool completely before cutting.',
     ingredients: [
       { name: 'Dark chocolate (70% cocoa)', qty: 0.011, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.007, unit: 'kg' },
@@ -1427,7 +1427,7 @@ const menuItemsData = [
     description: 'Chilled fudgy brownie drizzled with warm, rich hazelnut spread.',
     prep_time: 40,
     serving_size: '1 Slice',
-    instructions: '1. Bake the base brownies (Recipe 82) and cool completely in the tin.\nWarm 3 tbsp of hazelnut spread in the microwave in 10-second bursts until just pourable.\nDrizzle over the cooled brownie slab in zigzag lines. Allow to set for 10 minutes before cutting into squares.',
+    instructions: '1. Bake the base brownies (Recipe 82) and cool completely in the tin.\n2. Warm 3 tbsp of hazelnut spread in the microwave in 10-second bursts until just pourable.\n3. Drizzle over the cooled brownie slab in zigzag lines. Allow to set for 10 minutes before cutting into squares.',
     ingredients: [
       { name: 'Dark chocolate (70% cocoa)', qty: 0.011, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.007, unit: 'kg' },
@@ -1445,7 +1445,7 @@ const menuItemsData = [
     description: 'Perfect penne pasta tossed in a rich, buttery garlic cream and parmesan sauce.',
     prep_time: 20,
     serving_size: 'Regular (350g)',
-    instructions: '1. Cook pasta in well-salted boiling water until al dente. Reserve ½ cup of pasta water before draining.\nIn a wide pan, melt butter over medium heat and sauté minced garlic for 60 seconds until fragrant — do not let it brown. Add cream and simmer for 3 minutes until slightly thickened.\nToss drained pasta into the sauce. Add parmesan and stir until every piece is coated. Add splashes of pasta water to loosen if needed.\nSeason with black pepper and salt to taste. Serve immediately in warm bowls with fresh herbs.',
+    instructions: '1. Cook pasta in well-salted boiling water until al dente. Reserve ½ cup of pasta water before draining.\n2. In a wide pan, melt butter over medium heat and sauté minced garlic for 60 seconds until fragrant — do not let it brown. Add cream and simmer for 3 minutes until slightly thickened.\n3. Toss drained pasta into the sauce. Add parmesan and stir until every piece is coated. Add splashes of pasta water to loosen if needed.\n4. Season with black pepper and salt to taste. Serve immediately in warm bowls with fresh herbs.',
     ingredients: [
       { name: 'Pasta (penne or fettuccine)', qty: 0.1, unit: 'kg' },
       { name: 'Heavy cream / double cream', qty: 75, unit: 'ml' },
@@ -1461,7 +1461,7 @@ const menuItemsData = [
     description: 'Lightly toasted sourdough bread filled with chicken, cheese, and crunchy fresh greens.',
     prep_time: 5,
     serving_size: '1 Piece',
-    instructions: '1. Lightly toast both bread slices until golden and firm at the edges. Spread sauce on both slices right to the edges — this creates a moisture barrier and prevents sogginess.\nLayer cheese on one slice, then add the filling, followed by the cold vegetables. Season with salt and pepper.\nClose the sandwich, press gently, and cut diagonally with a sharp serrated knife.\nServe immediately on a plate with chips and a pickle.\n2. SYRUPS (HOUSE-MADE)',
+    instructions: '1. Lightly toast both bread slices until golden and firm at the edges. Spread sauce on both slices right to the edges — this creates a moisture barrier and prevents sogginess.\n2. Layer cheese on one slice, then add the filling, followed by the cold vegetables. Season with salt and pepper.\n3. Close the sandwich, press gently, and cut diagonally with a sharp serrated knife.\n4. Serve immediately on a plate with chips and a pickle.\n5. SYRUPS (HOUSE-MADE)',
     ingredients: [
       { name: 'Sourdough or ciabatta bread', qty: 2, unit: 'piece' },
       { name: 'Sandwich fillings: chicken, tuna, or vegetables', qty: 0.08, unit: 'kg' },
@@ -1479,7 +1479,7 @@ const menuItemsData = [
     description: 'Sweetener base used across all beverages and cocktail mixes.',
     prep_time: 10,
     serving_size: 'Bottle (300ml)',
-    instructions: '1. Combine sugar and water in a saucepan. Heat on medium, stirring continuously, until the sugar is fully dissolved and the syrup is clear. Do not let it boil.\nRemove from heat. Cool to room temperature, then transfer to a sterilised sealed glass bottle. Refrigerate for up to 4 weeks.\nFlavour variations — add during heating, strain before bottling:\nVanilla syrup: 1 split vanilla pod or 2 tsp vanilla extract.\nLavender syrup: 2 tbsp dried culinary lavender — steep off heat for 10 minutes, then strain.\nRose syrup: 2 tbsp dried food-safe rose petals + 2 drops rose water — steep 10 min, strain.\nCaramel syrup: Cook sugar alone until amber, then carefully add hot water and stir smooth.\nHazelnut syrup: 2 tbsp hazelnut paste + ½ tsp vanilla — heat and strain well through cheesecloth.\nBrown sugar syrup: Replace white sugar with brown sugar + a pinch of cinnamon.\nMint syrup: Make base syrup, remove from heat, steep 10 fresh mint leaves for 15 min, then strain.\nGinger syrup: Add 6 slices of fresh ginger during heating, steep 10 min, then strain.',
+    instructions: '1. Combine sugar and water in a saucepan. Heat on medium, stirring continuously, until the sugar is fully dissolved and the syrup is clear. Do not let it boil.\n2. Remove from heat. Cool to room temperature, then transfer to a sterilised sealed glass bottle. Refrigerate for up to 4 weeks.\nFlavour variations — add during heating, strain before bottling:\nVanilla syrup: 1 split vanilla pod or 2 tsp vanilla extract.\nLavender syrup: 2 tbsp dried culinary lavender — steep off heat for 10 minutes, then strain.\nRose syrup: 2 tbsp dried food-safe rose petals + 2 drops rose water — steep 10 min, strain.\nCaramel syrup: Cook sugar alone until amber, then carefully add hot water and stir smooth.\nHazelnut syrup: 2 tbsp hazelnut paste + ½ tsp vanilla — heat and strain well through cheesecloth.\nBrown sugar syrup: Replace white sugar with brown sugar + a pinch of cinnamon.\nMint syrup: Make base syrup, remove from heat, steep 10 fresh mint leaves for 15 min, then strain.\nGinger syrup: Add 6 slices of fresh ginger during heating, steep 10 min, then strain.',
     ingredients: [
       { name: 'White sugar / caster sugar', qty: 0.2, unit: 'kg' },
       { name: 'Filtered water', qty: 240, unit: 'ml' }
@@ -1492,7 +1492,7 @@ const menuItemsData = [
     description: 'Thick, buttery homemade caramel drizzle for beverages and pastry toppings.',
     prep_time: 15,
     serving_size: 'Jar (250ml)',
-    instructions: '1. Heat 200g of sugar in a heavy-bottomed pan over medium heat. Swirl the pan gently (do not stir) until the sugar fully melts into a deep amber caramel. Watch carefully — it can burn quickly once it starts to colour.\nRemove briefly from heat and add the cubed butter all at once — it will bubble vigorously. Whisk constantly until fully melted and smooth.\nSlowly pour in the warm cream while whisking continuously. Return to low heat briefly if needed and whisk until glossy and smooth.\nAdd a pinch of salt. Cool for 10 minutes before pouring into a clean glass jar. Refrigerate for up to 3 weeks. Reheat gently before using.',
+    instructions: '1. Heat 200g of sugar in a heavy-bottomed pan over medium heat. Swirl the pan gently (do not stir) until the sugar fully melts into a deep amber caramel. Watch carefully — it can burn quickly once it starts to colour.\n2. Remove briefly from heat and add the cubed butter all at once — it will bubble vigorously. Whisk constantly until fully melted and smooth.\n3. Slowly pour in the warm cream while whisking continuously. Return to low heat briefly if needed and whisk until glossy and smooth.\n4. Add a pinch of salt. Cool for 10 minutes before pouring into a clean glass jar. Refrigerate for up to 3 weeks. Reheat gently before using.',
     ingredients: [
       { name: 'White sugar / caster sugar', qty: 0.2, unit: 'kg' },
       { name: 'Unsalted butter', qty: 0.09, unit: 'kg' },

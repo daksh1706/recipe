@@ -21,6 +21,14 @@ const StaffManager = () => {
   const [showModal, setShowModal] = useState(false);
   const [editRoster, setEditRoster] = useState(null);
 
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
   // Form Fields
   const [userId, setUserId] = useState('');
   const [role, setRole] = useState('cashier');
@@ -154,24 +162,29 @@ const StaffManager = () => {
     }
   };
 
-  const handleDeleteRoster = async (id) => {
-    if (!window.confirm('Delete this staff member from the active roster? User account remains.')) return;
-
-    try {
-      const res = await fetch(`/api/staff/roster/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
-      if (res.ok) {
-        showToast('Staff roster profile deleted', 'success');
-        fetchData();
-      } else {
-        const data = await res.json();
-        showToast(data.message || 'Deletion failed', 'error');
+  const handleDeleteRoster = (id) => {
+    setConfirmModal({
+      show: true,
+      title: 'Delete Staff Member',
+      message: 'Are you sure you want to delete this staff member from the active roster? User account remains.',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/staff/roster/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${auth.token}` }
+          });
+          if (res.ok) {
+            showToast('Staff roster profile deleted', 'success');
+            fetchData();
+          } else {
+            const data = await res.json();
+            showToast(data.message || 'Deletion failed', 'error');
+          }
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
       }
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    });
   };
 
   // Compile weekly shifts calendar grid
@@ -556,6 +569,80 @@ const StaffManager = () => {
               </button>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {confirmModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div className="glass animate-slide-up" style={{
+            width: '400px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              padding: '1rem',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(217, 83, 79, 0.15)',
+              color: '#d9534f',
+              marginBottom: '1rem'
+            }}>
+              <Trash2 size={32} />
+            </div>
+            
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.75rem' }}>
+              {confirmModal.title || 'Are you sure?'}
+            </h3>
+            
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                className="btn btn-secondary" 
+                style={{ flex: 1, height: '2.5rem', justifyContent: 'center' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm();
+                  setConfirmModal({ ...confirmModal, show: false });
+                }}
+                className="btn" 
+                style={{ 
+                  flex: 1, 
+                  height: '2.5rem', 
+                  backgroundColor: '#d9534f', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

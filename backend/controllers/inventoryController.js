@@ -244,7 +244,7 @@ export const restockRawMaterial = async (req, res) => {
     // Fetch current stock, cost_per_unit, reorder_quantity
     const { data: currentMat, error: fetchErr } = await supabase
       .from('raw_materials')
-      .select('current_stock, cost_per_unit, reorder_quantity, name, unit, quantity_per_pack, pack_capacity_unit')
+      .select('current_stock, cost_per_unit, reorder_quantity, name, unit, quantity_per_pack, pack_capacity_unit, supplier:suppliers(name)')
       .eq('id', id)
       .eq('workspace_id', req.workspace_id)
       .single();
@@ -293,6 +293,20 @@ export const restockRawMaterial = async (req, res) => {
       notes: notes || `Manual restock intake. Total Cost: ₹${finalTotalCost || 'N/A'}`,
       workspace_id: req.workspace_id
     });
+
+    // Auto-log to expense tracker if cost > 0
+    if (finalTotalCost !== null && finalTotalCost > 0) {
+      await supabase.from('expenses').insert({
+        category: 'raw_materials',
+        description: `Restocked ${currentMat.name}: ${finalQty} ${currentMat.unit}`,
+        amount: finalTotalCost,
+        payment_method: 'cash',
+        paid_to: currentMat.supplier ? currentMat.supplier.name : 'Supplier',
+        notes: notes || `Auto-logged restock of ${currentMat.name}`,
+        recorded_by: req.user ? req.user.id : null,
+        workspace_id: req.workspace_id
+      });
+    }
 
     const responseItem = {
       ...mat,

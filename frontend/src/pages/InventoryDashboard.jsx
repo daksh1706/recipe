@@ -41,12 +41,31 @@ const generateNextCode = (cat, itemsList) => {
   return `${prefix}-${formattedNum}`;
 };
 
+const formatStock = (quantity, baseUnit) => {
+  const stock = Number(quantity || 0);
+  const unit = (baseUnit || '').toLowerCase();
+  if (unit === 'g' || unit === 'gm') {
+    return `${(stock / 1000).toFixed(3).replace(/\.?0+$/, '')} kg`;
+  }
+  if (unit === 'ml') {
+    return `${(stock / 1000).toFixed(3).replace(/\.?0+$/, '')} L`;
+  }
+  return `${stock} ${baseUnit}`;
+};
+
 const InventoryDashboard = ({ userRole }) => {
   const { showToast } = useContext(ToastContext);
   const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
 
-  // Active view tabs: 'stock' or 'transactions'
+  // Active view tabs: 'stock', 'equipment' or 'transactions'
   const [activeTab, setActiveTab] = useState('stock');
+
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
 
   // Roster States
   const [rawMaterials, setRawMaterials] = useState([]);
@@ -263,24 +282,29 @@ const InventoryDashboard = ({ userRole }) => {
     }
   };
 
-  const handleDeleteMaterial = async (id, mName) => {
-    if (!window.confirm(`Delete ${mName} from inventory rosters? This will clear stock transaction histories too.`)) return;
-
-    try {
-      const res = await fetch(`/api/inventory/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
-      if (res.ok) {
-        showToast('Raw material removed', 'success');
-        fetchData();
-      } else {
-        const data = await res.json();
-        showToast(data.message || 'Deletion failed', 'error');
+  const handleDeleteMaterial = (id, mName) => {
+    setConfirmModal({
+      show: true,
+      title: 'Remove Inventory Material',
+      message: `Are you sure you want to delete ${mName} from inventory rosters? This will clear stock transaction histories too.`,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/inventory/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${auth.token}` }
+          });
+          if (res.ok) {
+            showToast('Raw material removed', 'success');
+            fetchData();
+          } else {
+            const data = await res.json();
+            showToast(data.message || 'Deletion failed', 'error');
+          }
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
       }
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    });
   };
 
   // Restocking Modal Trigger
@@ -331,8 +355,12 @@ const InventoryDashboard = ({ userRole }) => {
 
   // Filter raw materials list locally
   const filteredMaterials = rawMaterials.filter(m => {
+    const isEquipment = m.itemCode && m.itemCode.toUpperCase().startsWith('RM-EQP');
+    if (activeTab === 'stock' && isEquipment) return false;
+    if (activeTab === 'equipment' && !isEquipment) return false;
+
     const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          m.itemCode.toLowerCase().includes(searchTerm.toLowerCase());
+                          (m.itemCode && m.itemCode.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCat = categoryFilter ? m.category === categoryFilter : true;
     const matchesStatus = statusFilter ? m.status === statusFilter : true;
     return matchesSearch && matchesCat && matchesStatus;
@@ -421,6 +449,22 @@ const InventoryDashboard = ({ userRole }) => {
           Raw Materials Stock Levels
         </button>
         <button
+          onClick={() => setActiveTab('equipment')}
+          style={{
+            padding: '0.5rem 1rem',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: '700',
+            fontSize: '0.85rem',
+            borderRadius: 'var(--radius-sm)',
+            backgroundColor: activeTab === 'equipment' ? 'var(--primary)' : 'transparent',
+            color: activeTab === 'equipment' ? 'white' : 'var(--text-muted)',
+            transition: 'var(--transition)'
+          }}
+        >
+          Equipment & Machines
+        </button>
+        <button
           onClick={() => setActiveTab('transactions')}
           style={{
             padding: '0.5rem 1rem',
@@ -439,7 +483,7 @@ const InventoryDashboard = ({ userRole }) => {
       </div>
 
       {/* TAB CONTENT 1: STOCK LEVELS */}
-      {activeTab === 'stock' && (
+      {(activeTab === 'stock' || activeTab === 'equipment') && (
         <div className="glass" style={{ padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           {/* Advanced filters console */}
@@ -516,16 +560,7 @@ const InventoryDashboard = ({ userRole }) => {
                         <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', fontSize: '0.85rem' }}>{m.name}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', textTransform: 'capitalize' }}>{m.category.replace('_', ' ')}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700', fontSize: '0.85rem' }}>
-                          {(() => {
-                            const stock = Number(m.currentStock);
-                            const unit = m.unit || '';
-                            if (stock >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
-                              const convertedVal = (stock / 1000).toFixed(1);
-                              const convertedUnit = unit.toLowerCase() === 'ml' ? 'L' : 'kg';
-                              return `${convertedVal} ${convertedUnit}`;
-                            }
-                            return `${m.currentStock} ${m.unit}`;
-                          })()}
+                          {formatStock(m.currentStock, m.unit)}
                         </td>
                         <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem' }}>₹{Number(m.costPerUnit).toFixed(2)}</td>
                         <td style={{ padding: '0.85rem 0.5rem', fontWeight: '800', color: 'var(--primary)' }}>₹{m.totalValue?.toFixed(1)}</td>
@@ -614,16 +649,7 @@ const InventoryDashboard = ({ userRole }) => {
 
                     <td style={{ padding: '0.85rem 0.5rem', fontWeight: '700' }}>
                       {tx.transaction_type === 'deduction' || tx.transaction_type === 'waste' ? '-' : '+'}
-                      {(() => {
-                        const qty = Number(tx.quantity);
-                        const unit = tx.rawMaterial?.unit || '';
-                        if (qty >= 1000 && (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gm' || unit.toLowerCase() === 'ml')) {
-                          const convertedVal = (qty / 1000).toFixed(1);
-                          const convertedUnit = unit.toLowerCase() === 'ml' ? 'L' : 'kg';
-                          return `${convertedVal} ${convertedUnit}`;
-                        }
-                        return `${tx.quantity} ${unit}`;
-                      })()}
+                      {formatStock(tx.quantity, tx.rawMaterial?.unit)}
                     </td>
 
                     <td style={{ padding: '0.85rem 0.5rem', fontSize: '0.8rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{tx.notes || 'N/A'}</td>
@@ -815,6 +841,80 @@ const InventoryDashboard = ({ userRole }) => {
               </button>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {confirmModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div className="glass animate-slide-up" style={{
+            width: '400px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              padding: '1rem',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(217, 83, 79, 0.15)',
+              color: '#d9534f',
+              marginBottom: '1rem'
+            }}>
+              <AlertTriangle size={32} />
+            </div>
+            
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.75rem' }}>
+              {confirmModal.title || 'Are you sure?'}
+            </h3>
+            
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                className="btn btn-secondary" 
+                style={{ flex: 1, height: '2.5rem', justifyContent: 'center' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm();
+                  setConfirmModal({ ...confirmModal, show: false });
+                }}
+                className="btn" 
+                style={{ 
+                  flex: 1, 
+                  height: '2.5rem', 
+                  backgroundColor: '#d9534f', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

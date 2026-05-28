@@ -14,6 +14,15 @@ const Expenses = () => {
   // States
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [rawMaterials, setRawMaterials] = useState([]);
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
   
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -34,6 +43,11 @@ const Expenses = () => {
   const [receiptUrl, setReceiptUrl] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Restock-specific fields for raw_materials
+  const [selectedSegment, setSelectedSegment] = useState('coffee_beans');
+  const [selectedMaterialId, setSelectedMaterialId] = useState('');
+  const [restockQuantity, setRestockQuantity] = useState('');
+
   const categories = [
     { value: 'rent', label: 'Rent Space' },
     { value: 'electricity', label: 'Electricity Utility' },
@@ -44,6 +58,23 @@ const Expenses = () => {
     { value: 'marketing', label: 'Marketing Promo' },
     { value: 'maintenance', label: 'Shop Maintenance' },
     { value: 'miscellaneous', label: 'Miscellaneous' }
+  ];
+
+  const categoriesList = [
+    { value: 'coffee_beans', label: 'Coffee Beans' },
+    { value: 'milk', label: 'Milk Type' },
+    { value: 'dairy', label: 'Dairy & Cheese' },
+    { value: 'syrups', label: 'Beverage Syrups' },
+    { value: 'sauces', label: 'Beverage Sauces' },
+    { value: 'bakery', label: 'Bakery Pastries' },
+    { value: 'fruits', label: 'Fruits' },
+    { value: 'packaging', label: 'Packaging Cups' },
+    { value: 'cleaning', label: 'Cleaning Supplies' },
+    { value: 'chocolate_cocoa', label: 'Chocolate & Cocoa' },
+    { value: 'fruits_veg', label: 'Fresh Produce' },
+    { value: 'specialty', label: 'Dried & Specialty' },
+    { value: 'dry_goods', label: 'Dry Goods' },
+    { value: 'other', label: 'Other Items' }
   ];
 
   const CHART_COLORS = ['#8C6239', '#D4A373', '#AFA59E', '#E07A5F', '#5bc0de', '#d9534f', '#2D231E', '#E9D8A6', '#C3905D'];
@@ -69,9 +100,27 @@ const Expenses = () => {
     }
   };
 
+  const fetchRawMaterials = async () => {
+    try {
+      const res = await fetch('/api/inventory', {
+        headers: { 'Authorization': `Bearer ${auth.token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRawMaterials(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchExpenses();
   }, [categoryFilter, startDate, endDate, paymentFilter]);
+
+  useEffect(() => {
+    fetchRawMaterials();
+  }, []);
 
   // Calculations for KPI Cards
   const calculateSummaries = () => {
@@ -150,6 +199,9 @@ const Expenses = () => {
       setPaidTo(e.paidTo || '');
       setReceiptUrl(e.receiptUrl || '');
       setNotes(e.notes || '');
+      setSelectedSegment('coffee_beans');
+      setSelectedMaterialId('');
+      setRestockQuantity('');
     } else {
       setEditId(null);
       setCategory('rent');
@@ -159,12 +211,57 @@ const Expenses = () => {
       setPaidTo('');
       setReceiptUrl('');
       setNotes('');
+      setSelectedSegment('coffee_beans');
+      setSelectedMaterialId('');
+      setRestockQuantity('');
     }
     setShowModal(true);
   };
 
   const handleSaveExpense = async (e) => {
     e.preventDefault();
+
+    if (category === 'raw_materials') {
+      if (!selectedMaterialId) {
+        showToast('Please select a raw material item to restock.', 'warning');
+        return;
+      }
+      if (!restockQuantity || Number(restockQuantity) <= 0) {
+        showToast('Please enter a restock quantity greater than 0.', 'warning');
+        return;
+      }
+    }
+
+    // Call restocking API directly if creating a new raw_materials expense
+    if (!editId && category === 'raw_materials') {
+      try {
+        const mat = rawMaterials.find(m => m.id === selectedMaterialId);
+        const res = await fetch(`/api/inventory/${selectedMaterialId}/restock`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${auth.token}`
+          },
+          body: JSON.stringify({
+            quantity: Number(restockQuantity),
+            totalCost: Number(amount),
+            notes: notes || `Logged via expense tracker: ${description}`
+          })
+        });
+        if (res.ok) {
+          showToast(`Stock replenished for ${mat ? mat.name : 'item'} and logged as expense!`, 'success');
+          setShowModal(false);
+          fetchExpenses();
+          fetchRawMaterials();
+        } else {
+          const err = await res.json();
+          showToast(err.message || 'Restock failed', 'error');
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+      return;
+    }
 
     const payload = {
       category,
@@ -201,24 +298,29 @@ const Expenses = () => {
     }
   };
 
-  const handleDeleteExpense = async (id) => {
-    if (!window.confirm('Delete this expense log? This action is irreversible.')) return;
-
-    try {
-      const res = await fetch(`/api/expenses/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
-      if (res.ok) {
-        showToast('Expense log removed', 'success');
-        fetchExpenses();
-      } else {
-        const data = await res.json();
-        showToast(data.message || 'Deletion failed', 'error');
+  const handleDeleteExpense = (id) => {
+    setConfirmModal({
+      show: true,
+      title: 'Delete Expense Record',
+      message: 'Are you sure you want to delete this expense log? This action is irreversible.',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/expenses/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${auth.token}` }
+          });
+          if (res.ok) {
+            showToast('Expense log removed', 'success');
+            fetchExpenses();
+          } else {
+            const data = await res.json();
+            showToast(data.message || 'Deletion failed', 'error');
+          }
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
       }
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
+    });
   };
 
   if (loading) {
@@ -463,6 +565,54 @@ const Expenses = () => {
                 </select>
               </div>
 
+              {category === 'raw_materials' && !editId && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Material Segment</label>
+                      <select value={selectedSegment} onChange={(e) => setSelectedSegment(e.target.value)}>
+                        {categoriesList.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Item Select</label>
+                      <select 
+                        value={selectedMaterialId} 
+                        onChange={(e) => {
+                          const matId = e.target.value;
+                          setSelectedMaterialId(matId);
+                          const mat = rawMaterials.find(m => m.id === matId);
+                          if (mat) {
+                            setDescription(`Restocked ${mat.name}`);
+                            setPaidTo(mat.supplier ? mat.supplier.name : '');
+                          }
+                        }}
+                        required={category === 'raw_materials'}
+                      >
+                        <option value="">-- Select Item --</option>
+                        {rawMaterials.filter(m => m.category === selectedSegment).map(m => (
+                          <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Restock Quantity ({rawMaterials.find(m => m.id === selectedMaterialId)?.unit || ''})</label>
+                    <input 
+                      type="number" 
+                      required={category === 'raw_materials'} 
+                      min="0.1" 
+                      step="any"
+                      placeholder="e.g. 5000" 
+                      value={restockQuantity} 
+                      onChange={(e) => setRestockQuantity(e.target.value)} 
+                    />
+                  </div>
+                </>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Amount Spent (₹)</label>
@@ -504,6 +654,80 @@ const Expenses = () => {
               </button>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {confirmModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div className="glass animate-slide-up" style={{
+            width: '400px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--bg-panel)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              padding: '1rem',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(217, 83, 79, 0.15)',
+              color: '#d9534f',
+              marginBottom: '1rem'
+            }}>
+              <Plus size={32} style={{ transform: 'rotate(45deg)' }} />
+            </div>
+            
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.75rem' }}>
+              {confirmModal.title || 'Are you sure?'}
+            </h3>
+            
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              {confirmModal.message}
+            </p>
+            
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                className="btn btn-secondary" 
+                style={{ flex: 1, height: '2.5rem', justifyContent: 'center' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm();
+                  setConfirmModal({ ...confirmModal, show: false });
+                }}
+                className="btn" 
+                style={{ 
+                  flex: 1, 
+                  height: '2.5rem', 
+                  backgroundColor: '#d9534f', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -4,6 +4,24 @@ import {
   Coffee, Edit, Plus, Trash2, Clock, CheckCircle, Eye, ArrowLeft, BookOpen, AlertTriangle
 } from 'lucide-react';
 
+const formatStock = (quantity, baseUnit) => {
+  const stock = Number(quantity || 0);
+  const unit = (baseUnit || '').toLowerCase().trim();
+  if (unit === 'g' || unit === 'gm') {
+    return `${(stock / 1000).toFixed(3).replace(/\.?0+$/, '')} kg`;
+  }
+  if (unit === 'kg') {
+    return `${stock.toFixed(3).replace(/\.?0+$/, '')} kg`;
+  }
+  if (unit === 'l' || unit === 'liter' || unit === 'liters') {
+    return `${(stock * 1000).toFixed(0)} ml`;
+  }
+  if (unit === 'ml') {
+    return `${stock.toFixed(0)} ml`;
+  }
+  return `${stock} ${baseUnit}`;
+};
+
 const RecipeManager = () => {
   const { showToast } = useContext(ToastContext);
   const auth = JSON.parse(localStorage.getItem('userInfo')) || {};
@@ -442,7 +460,7 @@ const RecipeManager = () => {
                               <td style={{ padding: '0.75rem 0.5rem' }}>{stdQtyDisp.qty}</td>
                               <td style={{ padding: '0.75rem 0.5rem', textTransform: 'lowercase' }}>{stdQtyDisp.unit}</td>
                               <td style={{ padding: '0.75rem 0.5rem', fontWeight: '600', color: isLow ? '#d9534f' : 'var(--text-main)' }}>
-                                {stockDisp ? `${stockDisp.qty} ${stockDisp.unit}` : 'N/A'}
+                                {raw.currentStock !== undefined ? formatStock(raw.currentStock, raw.unit) : 'N/A'}
                                 {isLow && <span style={{ fontSize: '0.65rem', marginLeft: '0.5rem', backgroundColor: 'rgba(217,83,79,0.15)', color: '#d9534f', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>Low</span>}
                               </td>
                             </tr>
