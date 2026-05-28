@@ -541,7 +541,7 @@ const Expenses = () => {
           zIndex: 9999
         }}>
           <div className="glass" style={{
-            width: '450px',
+            width: '600px',
             borderRadius: 'var(--radius-xl)',
             backgroundColor: 'var(--bg-panel)',
             padding: '2rem',
@@ -556,68 +556,68 @@ const Expenses = () => {
 
             <form onSubmit={handleSaveExpense} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Category Tag</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                  {categories.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Category Tag</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {categories.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Amount Spent (₹)</label>
+                  <input type="number" required min="1.00" placeholder="Amount INR" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                </div>
               </div>
 
               {category === 'raw_materials' && !editId && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Material Segment</label>
-                      <select value={selectedSegment} onChange={(e) => setSelectedSegment(e.target.value)}>
-                        {categoriesList.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Item Select</label>
-                      <select 
-                        value={selectedMaterialId} 
-                        onChange={(e) => {
-                          const matId = e.target.value;
-                          setSelectedMaterialId(matId);
-                          const mat = rawMaterials.find(m => m.id === matId);
-                          if (mat) {
-                            setDescription(`Restocked ${mat.name}`);
-                            setPaidTo(mat.supplier ? mat.supplier.name : '');
-                          }
-                        }}
-                        required={category === 'raw_materials'}
-                      >
-                        <option value="">-- Select Item --</option>
-                        {rawMaterials.filter(m => m.category === selectedSegment).map(m => (
-                          <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                        ))}
-                      </select>
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', border: '1px dashed var(--primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', backgroundColor: 'rgba(140, 98, 57, 0.05)' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '0.25rem' }}>Material Segment</label>
+                    <select value={selectedSegment} onChange={(e) => setSelectedSegment(e.target.value)}>
+                      {categoriesList.map(c => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Restock Quantity ({rawMaterials.find(m => m.id === selectedMaterialId)?.unit || ''})</label>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '0.25rem' }}>Item Select</label>
+                    <select 
+                      value={selectedMaterialId} 
+                      onChange={(e) => {
+                        const matId = e.target.value;
+                        setSelectedMaterialId(matId);
+                        const mat = rawMaterials.find(m => m.id === matId);
+                        if (mat) {
+                          setDescription(`Restocked ${mat.name}`);
+                          setPaidTo(mat.supplier ? mat.supplier.name : '');
+                        }
+                      }}
+                      required={category === 'raw_materials'}
+                    >
+                      <option value="">-- Select Item --</option>
+                      {rawMaterials.filter(m => m.category === selectedSegment).map(m => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--primary)', display: 'block', marginBottom: '0.25rem' }}>Restock Quantity ({rawMaterials.find(m => m.id === selectedMaterialId)?.unit || ''})</label>
                     <input 
                       type="number" 
                       required={category === 'raw_materials'} 
                       min="0.1" 
                       step="any"
-                      placeholder="e.g. 5000" 
+                      placeholder="e.g. 50" 
                       value={restockQuantity} 
                       onChange={(e) => setRestockQuantity(e.target.value)} 
                     />
                   </div>
-                </>
+                </div>
               )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Amount Spent (₹)</label>
-                  <input type="number" required min="1.00" placeholder="Amount INR" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                </div>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Mode</label>
                   <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
@@ -627,21 +627,21 @@ const Expenses = () => {
                     <option value="bank_transfer">Bank Transfer</option>
                   </select>
                 </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Paid To / Vendor Name</label>
+                  <input type="text" placeholder="State Power Co. / Arabica Beans Trader" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} />
+                </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Paid To / Vendor Name</label>
-                <input type="text" placeholder="State Power Co. / Arabica Beans Trader" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Description Summary</label>
-                <input type="text" required placeholder="Electricity invoice for the month of May" value={description} onChange={(e) => setDescription(e.target.value)} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Receipt File Link (URL)</label>
-                <input type="text" placeholder="https://image-hosting.com/receipt.jpg" value={receiptUrl} onChange={(e) => setReceiptUrl(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Description Summary</label>
+                  <input type="text" required placeholder="Electricity invoice for the month of May" value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Receipt File Link (URL)</label>
+                  <input type="text" placeholder="https://image-hosting.com/receipt.jpg" value={receiptUrl} onChange={(e) => setReceiptUrl(e.target.value)} />
+                </div>
               </div>
 
               <div>

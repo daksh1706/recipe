@@ -294,14 +294,31 @@ export const restockRawMaterial = async (req, res) => {
       workspace_id: req.workspace_id
     });
 
-    // Auto-log to expense tracker if cost > 0
-    if (finalTotalCost !== null && finalTotalCost > 0) {
+    // Auto-log to expense tracker (with dynamic cost fallback)
+    const expenseAmount = (finalTotalCost !== null && finalTotalCost > 0)
+      ? finalTotalCost
+      : Number((finalQty * Number(currentMat.cost_per_unit || 0)).toFixed(2));
+
+    if (expenseAmount > 0) {
+      let supplierName = 'Supplier';
+      if (currentMat.supplier) {
+        if (typeof currentMat.supplier === 'object') {
+          if (Array.isArray(currentMat.supplier)) {
+            supplierName = currentMat.supplier[0]?.name || 'Supplier';
+          } else {
+            supplierName = currentMat.supplier.name || 'Supplier';
+          }
+        } else {
+          supplierName = String(currentMat.supplier);
+        }
+      }
+
       await supabase.from('expenses').insert({
         category: 'raw_materials',
         description: `Restocked ${currentMat.name}: ${finalQty} ${currentMat.unit}`,
-        amount: finalTotalCost,
+        amount: expenseAmount,
         payment_method: 'cash',
-        paid_to: currentMat.supplier ? currentMat.supplier.name : 'Supplier',
+        paid_to: supplierName,
         notes: notes || `Auto-logged restock of ${currentMat.name}`,
         recorded_by: req.user ? req.user.id : null,
         workspace_id: req.workspace_id

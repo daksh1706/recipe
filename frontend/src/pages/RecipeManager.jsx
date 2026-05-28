@@ -10,14 +10,14 @@ const formatStock = (quantity, baseUnit) => {
   if (unit === 'g' || unit === 'gm') {
     return `${(stock / 1000).toFixed(3).replace(/\.?0+$/, '')} kg`;
   }
-  if (unit === 'kg') {
-    return `${stock.toFixed(3).replace(/\.?0+$/, '')} kg`;
+  if (unit === 'ml') {
+    return `${(stock / 1000).toFixed(3).replace(/\.?0+$/, '')} L`;
   }
   if (unit === 'l' || unit === 'liter' || unit === 'liters') {
-    return `${(stock * 1000).toFixed(0)} ml`;
+    return `${stock} L`;
   }
-  if (unit === 'ml') {
-    return `${stock.toFixed(0)} ml`;
+  if (unit === 'kg') {
+    return `${stock} kg`;
   }
   return `${stock} ${baseUnit}`;
 };
