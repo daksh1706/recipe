@@ -191,6 +191,11 @@ input::placeholder, textarea::placeholder {
   box-shadow: var(--shadow-md);
 }
 
+.pos-item-card:hover .customize-pill {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
 .pos-item-name {
   font-size: 1rem;
   font-weight: 600;
