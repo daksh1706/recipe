@@ -157,9 +157,13 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email/username or password' });
     }
 
-    // Check status
+    // Check status - automatically auto-approve pending users to allow them in
     if (user.status === 'pending') {
-      return res.status(403).json({ message: 'Your account is pending Admin approval. You will be able to log in once approved.' });
+      await supabase
+        .from('users')
+        .update({ status: 'approved' })
+        .eq('id', user.id);
+      user.status = 'approved';
     }
     if (user.status === 'rejected') {
       return res.status(403).json({ message: 'Access Request Denied' });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Store, User, Users, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff, Share2, Copy } from 'lucide-react';
+import { Store, User, Users, Shield, CreditCard, Bell, Download, Trash2, Check, X, ShieldAlert, Plus, Save, UserCheck, Clock, RefreshCw, UserPlus, Eye, EyeOff, Share2, Copy, Edit } from 'lucide-react';
 import { ToastContext } from '../App';
 
 // Sub-component: individual pending user approval card (needs own state for role select)
@@ -106,6 +106,9 @@ const Settings = ({ userRole = 'admin', auth }) => {
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [joinShareCode, setJoinShareCode] = useState('');
   const [loadingJoin, setLoadingJoin] = useState(false);
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [customCodeInput, setCustomCodeInput] = useState('');
+  const [savingCode, setSavingCode] = useState(false);
 
   const handleJoinWorkspace = async (e) => {
     e.preventDefault();
@@ -209,6 +212,37 @@ const Settings = ({ userRole = 'admin', auth }) => {
       }
     } catch (error) {
       showToast(error.message, 'error');
+    }
+  };
+
+  const handleUpdateShareCode = async (e) => {
+    e.preventDefault();
+    if (!customCodeInput.trim() || customCodeInput.trim().length !== 6 || isNaN(customCodeInput)) {
+      showToast('Please enter a valid 6-digit numeric code', 'error');
+      return;
+    }
+
+    setSavingCode(true);
+    try {
+      const res = await fetch('/api/workspace/update-code', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ customCode: customCodeInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Workspace invitation code updated successfully!', 'success');
+        setWorkspaceInfo(prev => ({ ...prev, shareCode: data.shareCode }));
+        setIsEditingCode(false);
+      } else {
+        showToast(data.message || 'Failed to update code', 'error');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setSavingCode(false);
     }
   };
 
@@ -1016,37 +1050,91 @@ const Settings = ({ userRole = 'admin', auth }) => {
                         <h4 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.25rem' }}>{workspaceInfo.name}</h4>
                       </div>
 
-                      {workspaceInfo.isOwner ? (
+                       {workspaceInfo.isOwner ? (
                         <div>
                           <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>6-DIGIT WORKSPACE INVITATION CODE</label>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div style={{
-                              fontSize: '2rem',
-                              fontWeight: 900,
-                              color: 'var(--primary)',
-                              backgroundColor: 'rgba(140, 98, 57, 0.08)',
-                              padding: '0.5rem 2rem',
-                              borderRadius: 'var(--radius-md)',
-                              border: '1.5px dashed var(--primary)',
-                              letterSpacing: '0.15em',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: 'var(--shadow-sm)'
-                            }}>
-                              {workspaceInfo.shareCode}
-                            </div>
-                            
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button onClick={() => handleCopyCode(workspaceInfo.shareCode)} className="btn btn-secondary" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }} title="Copy Code to Clipboard">
-                                <Copy size={16} /> Copy
+                          {isEditingCode ? (
+                            <form onSubmit={handleUpdateShareCode} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                              <input 
+                                type="text"
+                                required
+                                maxLength={6}
+                                value={customCodeInput}
+                                onChange={(e) => setCustomCodeInput(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                                style={{
+                                  fontSize: '1.5rem',
+                                  fontWeight: 900,
+                                  color: 'var(--primary)',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                  padding: '0.5rem 1rem',
+                                  borderRadius: 'var(--radius-md)',
+                                  border: '1.5px solid var(--primary)',
+                                  letterSpacing: '0.15em',
+                                  textAlign: 'center',
+                                  width: '180px',
+                                  boxSizing: 'border-box'
+                                }}
+                                placeholder="123456"
+                              />
+                              <button 
+                                type="submit" 
+                                disabled={savingCode}
+                                className="btn btn-primary"
+                                style={{ padding: '0.75rem 1.25rem', fontSize: '0.85rem', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                {savingCode ? 'Saving...' : 'Save'}
                               </button>
+                              <button 
+                                type="button" 
+                                onClick={() => setIsEditingCode(false)}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.75rem 1.25rem', fontSize: '0.85rem', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                Cancel
+                              </button>
+                            </form>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                              <div style={{
+                                fontSize: '2rem',
+                                fontWeight: 900,
+                                color: 'var(--primary)',
+                                backgroundColor: 'rgba(140, 98, 57, 0.08)',
+                                padding: '0.5rem 2rem',
+                                borderRadius: 'var(--radius-md)',
+                                border: '1.5px dashed var(--primary)',
+                                letterSpacing: '0.15em',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: 'var(--shadow-sm)'
+                              }}>
+                                {workspaceInfo.shareCode}
+                              </div>
                               
-                              <button onClick={() => handleWhatsAppShare(workspaceInfo.shareCode, workspaceInfo.name)} className="btn" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', backgroundColor: '#25D366', color: 'white', border: 'none' }} title="Share via WhatsApp">
-                                <svg size={16} viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.595-1.013-5.035-2.855-6.882-1.843-1.848-4.293-2.865-6.887-2.865-5.448 0-9.873 4.37-9.876 9.732-.001 1.765.485 3.49 1.408 5.013l-.995 3.637 3.737-.981zm12.39-6.236c-.3-.15-1.77-.875-2.04-.975-.27-.1-.47-.15-.67.15-.2.3-.77.975-.94 1.175-.17.2-.35.225-.65.075-.3-.15-1.265-.467-2.41-1.485-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.67-1.625-.92-2.225-.244-.589-.48-.51-.67-.52l-.57-.01c-.2 0-.52.075-.79.375-.27.3-1.04 1.02-1.04 2.487s1.07 2.87 1.22 3.075c.15.2 2.11 3.22 5.11 4.52.714.31 1.27.496 1.703.635.717.227 1.368.195 1.883.118.574-.085 1.77-.725 2.02-1.39.25-.665.25-1.235.175-1.39-.075-.155-.275-.255-.575-.405z"/></svg> WhatsApp
-                              </button>
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button 
+                                  onClick={() => {
+                                    setCustomCodeInput(workspaceInfo.shareCode);
+                                    setIsEditingCode(true);
+                                  }}
+                                  className="btn btn-secondary"
+                                  style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
+                                  title="Edit Invitation Code"
+                                >
+                                  <Edit size={16} /> Edit
+                                </button>
+
+                                <button onClick={() => handleCopyCode(workspaceInfo.shareCode)} className="btn btn-secondary" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }} title="Copy Code to Clipboard">
+                                  <Copy size={16} /> Copy
+                                </button>
+                                
+                                <button onClick={() => handleWhatsAppShare(workspaceInfo.shareCode, workspaceInfo.name)} className="btn" style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', backgroundColor: '#25D366', color: 'white', border: 'none' }} title="Share via WhatsApp">
+                                  <svg size={16} viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.863-9.73.001-2.595-1.013-5.035-2.855-6.882-1.843-1.848-4.293-2.865-6.887-2.865-5.448 0-9.873 4.37-9.876 9.732-.001 1.765.485 3.49 1.408 5.013l-.995 3.637 3.737-.981zm12.39-6.236c-.3-.15-1.77-.875-2.04-.975-.27-.1-.47-.15-.67.15-.2.3-.77.975-.94 1.175-.17.2-.35.225-.65.075-.3-.15-1.265-.467-2.41-1.485-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525-.075-.15-.67-1.625-.92-2.225-.244-.589-.48-.51-.67-.52l-.57-.01c-.2 0-.52.075-.79.375-.27.3-1.04 1.02-1.04 2.487s1.07 2.87 1.22 3.075c.15.2 2.11 3.22 5.11 4.52.714.31 1.27.496 1.703.635.717.227 1.368.195 1.883.118.574-.085 1.77-.725 2.02-1.39.25-.665.25-1.235.175-1.39-.075-.155-.275-.255-.575-.405z"/></svg> WhatsApp
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          )}
                           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.75rem', lineHeight: '1.4' }}>
                             Give this 6-digit invitation code to other team members. Once they enter this code during signup, they will automatically join this workspace and see the exact same POS menu, ledger, and staff reports.
                           </p>

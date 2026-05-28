@@ -7,7 +7,8 @@ import {
   removeWorkspaceMember,
   getWorkspaceJoinStatus,
   cancelWorkspaceJoinRequest,
-  approveWorkspaceMember
+  approveWorkspaceMember,
+  updateWorkspaceShareCode
 } from '../controllers/workspaceController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { workspaceProtect } from '../middleware/workspaceMiddleware.js';
@@ -23,6 +24,7 @@ router.delete('/join-cancel', protect, cancelWorkspaceJoinRequest);
 // Gated behind both auth validation and active workspace validation
 router.get('/info', protect, workspaceProtect, getWorkspaceInfo);
 router.put('/regenerate-code', protect, workspaceProtect, regenerateShareCode);
+router.put('/update-code', protect, workspaceProtect, updateWorkspaceShareCode);
 router.delete('/members/:userId', protect, workspaceProtect, removeWorkspaceMember);
 router.put('/members/approve', protect, workspaceProtect, approveWorkspaceMember);
 

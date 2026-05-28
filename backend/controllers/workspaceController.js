@@ -463,3 +463,58 @@ export const approveWorkspaceMember = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// 9. Update Workspace Invitation Code to a custom 6-digit code
+export const updateWorkspaceShareCode = async (req, res) => {
+  const { customCode } = req.body;
+  if (!customCode || customCode.length !== 6 || isNaN(customCode)) {
+    return res.status(400).json({ message: 'A valid 6-digit numeric invitation code is required.' });
+  }
+
+  try {
+    // Safety check: verify owner authorization
+    const { data: workspace, error: wsError } = await supabase
+      .from('workspaces')
+      .select('owner_id')
+      .eq('id', req.workspace_id)
+      .single();
+
+    if (wsError) throw wsError;
+
+    if (workspace.owner_id !== req.user.id && (req.user.role || '').toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only the workspace owner is authorized to update the invite code.' });
+    }
+
+    const obfuscated = obfuscateCode(customCode.trim());
+
+    // Check if code is already in use by another workspace
+    const { data: existing, error: checkError } = await supabase
+      .from('workspaces')
+      .select('id')
+      .eq('share_code', obfuscated)
+      .neq('id', req.workspace_id)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    if (existing) {
+      return res.status(400).json({ message: 'This invitation code is already in use by another workspace. Please choose a different 6-digit code.' });
+    }
+
+    // Update workspace share code
+    const { error: updateError } = await supabase
+      .from('workspaces')
+      .update({ share_code: obfuscated })
+      .eq('id', req.workspace_id);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      message: 'Invitation code updated successfully!',
+      shareCode: customCode
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
