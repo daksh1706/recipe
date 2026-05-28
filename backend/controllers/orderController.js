@@ -119,7 +119,7 @@ export const createOrder = async (req, res) => {
     for (const item of items) {
       const { data: menuItem, error: menuErr } = await supabase
         .from('menu_items')
-        .select('*, recipes(*, recipe_ingredients(*, raw_materials(*))))')
+        .select('*, recipes(*, recipe_ingredients(*, raw_materials(*)))')
         .eq('id', item.menuItemId || item.menu_item_id)
         .eq('workspace_id', req.workspace_id)
         .single();
@@ -444,7 +444,7 @@ export const updateOrderStatus = async (req, res) => {
       for (const item of order.order_items) {
         const { data: menuItem } = await supabase
           .from('menu_items')
-          .select('*, recipes(*, recipe_ingredients(*, raw_materials(*))))')
+          .select('*, recipes(*, recipe_ingredients(*, raw_materials(*)))')
           .eq('id', item.menu_item_id)
           .eq('workspace_id', req.workspace_id)
           .single();

@@ -117,10 +117,27 @@ async function seed() {
 
   const seededSuppliers = [];
   for (const s of suppliersToSeed) {
-    const { data, error } = await supabase
+    const { data: existingSup } = await supabase
       .from('suppliers')
-      .upsert(s, { onConflict: 'name' })
-      .select();
+      .select('id')
+      .eq('name', s.name)
+      .maybeSingle();
+
+    let result;
+    if (existingSup) {
+      result = await supabase
+        .from('suppliers')
+        .update(s)
+        .eq('id', existingSup.id)
+        .select();
+    } else {
+      result = await supabase
+        .from('suppliers')
+        .insert(s)
+        .select();
+    }
+
+    const { data, error } = result;
 
     if (error) {
       console.error(`Error seeding supplier ${s.name}:`, error.message);
@@ -225,7 +242,7 @@ async function seed() {
       item_code: 'MENU-ESP-001',
       name: 'Double Espresso',
       description: 'Bold, rich double shot of our premium espresso roast.',
-      category: 'hot_coffee',
+      category: 'espresso',
       price: 120.0,
       gst_percent: 5.0,
       is_available: true,
@@ -235,7 +252,7 @@ async function seed() {
       item_code: 'MENU-CAP-002',
       name: 'Classic Cappuccino',
       description: 'Rich espresso layered with warm textured milk and velvety foam.',
-      category: 'hot_coffee',
+      category: 'cappuccino',
       price: 160.0,
       gst_percent: 5.0,
       is_available: true,
@@ -245,7 +262,7 @@ async function seed() {
       item_code: 'MENU-MAC-003',
       name: 'Iced Caramel Macchiato',
       description: 'Espresso combined with vanilla-flavored syrup, milk and caramel drizzle over ice.',
-      category: 'cold_coffee',
+      category: 'macchiato',
       price: 210.0,
       gst_percent: 5.0,
       is_available: true,
