@@ -40,7 +40,6 @@ Use these pre-approved demo accounts to explore different user permission tiers.
 
 | Full Name | Role | Email Address | Phone Number | Password |
 | :--- | :--- | :--- | :--- | :--- |
-| **Daksh Maru** | Administrator (Full access) | `dakshmaru10@gmail.com` | `9876543210` | `Daksh@2006` |
 | **Demo Test Account** | Administrator (Full access) | `test@gmail.com` | `9999999999` | `password123` |
 | **Jane Manager** | Manager | `manager@coffee.com` | `9876543211` | `password123` |
 | **Bob Barista** | Barista | `barista@coffee.com` | `9876543212` | `password123` |
