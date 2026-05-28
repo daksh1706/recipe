@@ -167,12 +167,17 @@ export const getDashboardCharts = async (req, res) => {
     if (catErr) throw catErr;
 
     const categorySales = {
-      hot_coffee: 0,
-      cold_coffee: 0,
+      espresso: 0,
+      latte: 0,
+      cappuccino: 0,
+      mocha: 0,
+      americano: 0,
+      flat_white: 0,
+      macchiato: 0,
       frappuccino: 0,
+      cold_brew: 0,
       soda: 0,
-      light_bites: 0,
-      savoury_bites: 0
+      light_bites: 0
     };
 
     catOrders.forEach(co => {

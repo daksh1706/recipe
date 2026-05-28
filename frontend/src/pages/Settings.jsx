@@ -1750,6 +1750,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
           )}
 
           {/* 3. GST Configurations */}
+          {/* 3. GST Configurations */}
           {activeTab === 'gst' && (
             <div>
               <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1759,64 +1760,103 @@ const Settings = ({ userRole = 'admin', auth }) => {
               <form onSubmit={handleSaveGst} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Configure the default GST percentage charged for menu products in each category:</p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Hot Coffee (%)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Espresso (%)</label>
                     <input 
                       type="number" 
-                      value={gstConfig.hot_coffee} 
-                      onChange={(e) => setGstConfig({...gstConfig, hot_coffee: parseFloat(e.target.value)})} 
+                      value={gstConfig.espresso || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, espresso: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Cold Coffee (%)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Latte (%)</label>
                     <input 
                       type="number" 
-                      value={gstConfig.cold_coffee} 
-                      onChange={(e) => setGstConfig({...gstConfig, cold_coffee: parseFloat(e.target.value)})} 
+                      value={gstConfig.latte || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, latte: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Frappuccino (%)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Cappuccino (%)</label>
                     <input 
                       type="number" 
-                      value={gstConfig.frappuccino} 
+                      value={gstConfig.cappuccino || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, cappuccino: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Mocha (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.mocha || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, mocha: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Americano (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.americano || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, americano: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Flat White (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.flat_white || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, flat_white: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Macchiato (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.macchiato || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, macchiato: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Frappuccino (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.frappuccino || 0} 
                       onChange={(e) => setGstConfig({...gstConfig, frappuccino: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Soda / Soft drinks (%)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Cold Brew (%)</label>
                     <input 
                       type="number" 
-                      value={gstConfig.soda} 
+                      value={gstConfig.cold_brew || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, cold_brew: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Soda / Soft drinks (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.soda || 0} 
                       onChange={(e) => setGstConfig({...gstConfig, soda: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Light Bites (%)</label>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Light Bites (%)</label>
                     <input 
                       type="number" 
-                      value={gstConfig.light_bites} 
+                      value={gstConfig.light_bites || 0} 
                       onChange={(e) => setGstConfig({...gstConfig, light_bites: parseFloat(e.target.value)})} 
-                      min="0" max="100" required 
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Savoury Bites (%)</label>
-                    <input 
-                      type="number" 
-                      value={gstConfig.savoury_bites} 
-                      onChange={(e) => setGstConfig({...gstConfig, savoury_bites: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>
