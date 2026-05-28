@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Coffee, Plus, Users, Send, LogOut, Loader2 } from 'lucide-react';
 import { ToastContext } from '../App';
 
@@ -8,6 +8,99 @@ const WorkspaceSelector = ({ auth, setAuth, handleLogout }) => {
   const [shareCode, setShareCode] = useState('');
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingJoin, setLoadingJoin] = useState(false);
+
+  // Pending Join Request States
+  const [pendingRequest, setPendingRequest] = useState(null); // { workspaceName: '...' }
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [cancellingRequest, setCancellingRequest] = useState(false);
+
+  const checkPendingStatus = async (silent = false) => {
+    if (!silent) setCheckingStatus(true);
+    try {
+      const response = await fetch('/api/workspace/join-status');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.pending) {
+          setPendingRequest({ workspaceName: data.workspaceName });
+        } else {
+          setPendingRequest(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking join request status:', error);
+    } finally {
+      if (!silent) setCheckingStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    checkPendingStatus(true);
+  }, []);
+
+  const handleCheckStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      // 1. Fetch `/api/auth/me` to see if workspace_id has been approved/populated
+      const meRes = await fetch('/api/auth/me');
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.workspace_id) {
+          showToast('Workspace join request approved! Loading console...', 'success');
+          
+          const updatedUser = { 
+            ...auth, 
+            workspace_id: meData.workspace_id,
+            workspace_name: meData.workspace_name || '',
+            workspace_role: meData.role
+          };
+          
+          localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+          setAuth(updatedUser);
+          return;
+        }
+      }
+
+      // 2. Otherwise refresh the pending request status
+      const response = await fetch('/api/workspace/join-status');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.pending) {
+          showToast('Your request is still pending Admin approval.', 'info');
+          setPendingRequest({ workspaceName: data.workspaceName });
+        } else {
+          showToast('Your request has been approved or processed! Please try checking again or refresh.', 'warning');
+          setPendingRequest(null);
+        }
+      }
+    } catch (error) {
+      showToast('Error checking request status', 'error');
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!window.confirm('Are you sure you want to cancel your request to join this workspace?')) {
+      return;
+    }
+    setCancellingRequest(true);
+    try {
+      const response = await fetch('/api/workspace/join-cancel', {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        showToast('Join request cancelled successfully.', 'warning');
+        setPendingRequest(null);
+      } else {
+        const err = await response.json();
+        showToast(err.message || 'Failed to cancel request.', 'error');
+      }
+    } catch (error) {
+      showToast('Error cancelling request.', 'error');
+    } finally {
+      setCancellingRequest(false);
+    }
+  };
 
   // 1. Handle Workspace Creation
   const handleCreateWorkspace = async (e) => {
@@ -75,23 +168,160 @@ const WorkspaceSelector = ({ auth, setAuth, handleLogout }) => {
         throw new Error(data.message || 'Failed to join workspace');
       }
 
-      showToast(`Successfully joined workspace "${data.workspace_name}"!`, 'success');
+      if (data.pending) {
+        showToast(data.message || 'Join request submitted for approval.', 'success');
+        setPendingRequest({ workspaceName: data.workspace_name });
+      } else {
+        showToast(`Successfully joined workspace "${data.workspace_name}"!`, 'success');
 
-      // Update session auth state
-      const updatedUser = { 
-        ...auth, 
-        workspace_id: data.id, 
-        workspace_name: data.workspace_name, 
-        workspace_role: data.role 
-      };
-      localStorage.setItem('userInfo', JSON.stringify(updatedUser));
-      setAuth(updatedUser);
+        // Update session auth state
+        const updatedUser = { 
+          ...auth, 
+          workspace_id: data.id, 
+          workspace_name: data.workspace_name, 
+          workspace_role: data.role 
+        };
+        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        setAuth(updatedUser);
+      }
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
       setLoadingJoin(false);
     }
   };
+
+  // Render pending join request screen
+  if (pendingRequest) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'var(--bg-dark)',
+        padding: '2rem',
+        position: 'relative',
+        fontFamily: 'Inter, sans-serif'
+      }}>
+        {/* Background Graphic Accents */}
+        <div style={{
+          position: 'absolute',
+          top: '10%',
+          left: '5%',
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(140, 98, 57, 0.05) 0%, transparent 70%)',
+          filter: 'blur(40px)',
+          zIndex: 0
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '10%',
+          right: '5%',
+          width: '450px',
+          height: '450px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(212, 163, 115, 0.06) 0%, transparent 70%)',
+          filter: 'blur(50px)',
+          zIndex: 0
+        }} />
+
+        <div className="glass animate-slide-up" style={{
+          width: '100%',
+          maxWidth: '540px',
+          borderRadius: 'var(--radius-xl)',
+          backgroundColor: 'var(--bg-panel)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '3rem 2.5rem',
+          position: 'relative',
+          zIndex: 1,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.5rem'
+        }}>
+          <div style={{
+            backgroundColor: 'rgba(245, 158, 11, 0.08)',
+            color: '#f59e0b',
+            padding: '1.25rem',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Loader2 className="animate-spin" size={32} />
+          </div>
+
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', color: '#f59e0b', letterSpacing: '0.05em' }}>REQUEST SUBMITTED</span>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-main)', marginTop: '0.5rem' }}>Pending Admin Approval</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.75rem', lineHeight: '1.5' }}>
+              Your request to join the workspace <strong style={{ color: 'var(--text-main)' }}>"{pendingRequest.workspaceName}"</strong> has been successfully submitted to the Administrator.
+            </p>
+            <p style={{ color: 'var(--text-muted)', opacity: 0.8, fontSize: '0.8rem', marginTop: '0.5rem', lineHeight: '1.4' }}>
+              Please wait for the Admin to approve your access. Once approved, you can start managing orders, products, and inventory.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', marginTop: '0.5rem' }}>
+            <button
+              onClick={handleCheckStatus}
+              disabled={checkingStatus}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '0.85rem',
+                fontSize: '0.95rem',
+                fontWeight: 'bold',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              {checkingStatus ? 'Checking Status...' : 'Check Status Now'}
+            </button>
+
+            <button
+              onClick={handleCancelRequest}
+              disabled={cancellingRequest}
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                padding: '0.85rem',
+                fontSize: '0.95rem',
+                fontWeight: 'bold',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                color: 'var(--error)',
+                borderColor: 'var(--error)'
+              }}
+            >
+              {cancellingRequest ? 'Cancelling...' : 'Cancel Request & Join Another'}
+            </button>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', width: '100%', marginTop: '0.5rem' }}>
+            <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}>
+              <LogOut size={14} /> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -232,17 +462,6 @@ const WorkspaceSelector = ({ auth, setAuth, handleLogout }) => {
               </button>
             </form>
           </div>
-
-          {/* Vertical Divider Line */}
-          <div style={{
-            position: 'absolute',
-            top: '32%',
-            bottom: '5%',
-            left: '50%',
-            width: '1px',
-            backgroundColor: 'var(--border)',
-            display: 'block'
-          }} className="d-md-none" />
 
           {/* Card 2: Join Workspace */}
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

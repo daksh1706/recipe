@@ -212,8 +212,12 @@ const Settings = ({ userRole = 'admin', auth }) => {
     }
   };
 
-  const handleRemoveMember = async (memberId, memberName) => {
-    if (!window.confirm(`Are you sure you want to remove "${memberName}" from this workspace? They will be kicked and forced to select/join a workspace.`)) {
+  const handleRemoveMember = async (memberId, memberName, isPending = false) => {
+    const confirmMessage = isPending 
+      ? `Are you sure you want to reject the request from "${memberName}" to join this workspace?`
+      : `Are you sure you want to remove "${memberName}" from this workspace? They will be kicked and forced to select/join a workspace.`;
+      
+    if (!window.confirm(confirmMessage)) {
       return;
     }
     try {
@@ -222,13 +226,32 @@ const Settings = ({ userRole = 'admin', auth }) => {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('Member removed successfully', 'success');
+        showToast(isPending ? 'Join request rejected.' : 'Member removed successfully', 'success');
         fetchWorkspaceInfo();
       } else {
-        showToast(data.message || 'Failed to remove member', 'error');
+        showToast(data.message || 'Action failed', 'error');
       }
     } catch (error) {
       showToast(error.message, 'error');
+    }
+  };
+
+  const handleApproveJoin = async (memberUserId, memberName) => {
+    try {
+      const res = await fetch('/api/workspace/members/approve', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberUserId })
+      });
+      if (res.ok) {
+        showToast(`Approved "${memberName}" to join the workspace!`, 'success');
+        fetchWorkspaceInfo();
+      } else {
+        const err = await res.json();
+        showToast(err.message || 'Approval failed', 'error');
+      }
+    } catch (error) {
+      showToast('Error approving workspace request', 'error');
     }
   };
 
@@ -1133,9 +1156,78 @@ const Settings = ({ userRole = 'admin', auth }) => {
 
                   </div>
 
+                  {/* Pending Join Requests Section */}
+                  {workspaceInfo.isOwner && workspaceInfo.members.filter(m => m.status === 'pending').length > 0 && (
+                    <div style={{ marginTop: '2rem', border: '1px solid #f59e0b44', borderRadius: 'var(--radius-md)', padding: '1.5rem', backgroundColor: 'rgba(245,158,11,0.03)' }}>
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#f59e0b', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        ⏳ Pending Join Requests ({workspaceInfo.members.filter(m => m.status === 'pending').length})
+                      </h4>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                        The following users entered your 6-digit workspace code and are requesting access to this store.
+                      </p>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {workspaceInfo.members.filter(m => m.status === 'pending').map(m => (
+                          <div key={m.userId} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.85rem 1.25rem',
+                            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-sm)',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>{m.name}</div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{m.email}</div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                onClick={() => handleApproveJoin(m.userId, m.name)}
+                                className="btn"
+                                style={{
+                                  padding: '0.4rem 0.85rem',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 'bold',
+                                  backgroundColor: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 'var(--radius-sm)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ✓ Approve
+                              </button>
+                              <button
+                                onClick={() => handleRemoveMember(m.userId, m.name, true)}
+                                className="btn"
+                                style={{
+                                  padding: '0.4rem 0.85rem',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 'bold',
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 'var(--radius-sm)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ✕ Reject
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Members List Section */}
-                  <div style={{ marginTop: '1rem' }}>
-                    <h4 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '1rem' }}>Workspace Members ({workspaceInfo.members.length})</h4>
+                  <div style={{ marginTop: '2rem' }}>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '1rem' }}>
+                      Workspace Members ({workspaceInfo.members.filter(m => m.status !== 'pending').length})
+                    </h4>
                     
                     <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -1151,7 +1243,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {workspaceInfo.members.map(m => (
+                          {workspaceInfo.members.filter(m => m.status !== 'pending').map(m => (
                             <tr key={m.userId} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.85rem' }} className="hover-brighten">
                               <td style={{ padding: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>
                                 {m.name} {auth && m.userId === auth._id && <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(140,98,57,0.15)', color: 'var(--primary)', padding: '0.15rem 0.4rem', borderRadius: '4px', marginLeft: '0.5rem', fontWeight: '800' }}>YOU</span>}
@@ -1198,6 +1290,13 @@ const Settings = ({ userRole = 'admin', auth }) => {
                               )}
                             </tr>
                           ))}
+                          {workspaceInfo.members.filter(m => m.status !== 'pending').length === 0 && (
+                            <tr>
+                              <td colSpan={workspaceInfo.isOwner ? 5 : 4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                No active members in this workspace.
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>

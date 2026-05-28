@@ -130,31 +130,55 @@ export const joinWorkspace = async (req, res) => {
     // Check if already a member
     const { data: existingMember } = await supabase
       .from('workspace_members')
-      .select('id')
+      .select('*')
       .eq('workspace_id', workspace.id)
       .eq('user_id', req.user.id)
       .maybeSingle();
 
-    if (!existingMember) {
-      // Register user as member
-      const { error: joinError } = await supabase
-        .from('workspace_members')
-        .insert({
+    if (existingMember) {
+      if (existingMember.status === 'approved') {
+        const { error: userError } = await supabase
+          .from('users')
+          .update({ workspace_id: workspace.id })
+          .eq('id', req.user.id);
+
+        if (userError) throw userError;
+
+        await supabase.from('workspace_join_attempts').insert({
           workspace_id: workspace.id,
-          user_id: req.user.id,
-          role: 'member'
+          ip_address: ipAddress,
+          success: true
         });
 
-      if (joinError) throw joinError;
+        return res.json({
+          message: 'Successfully joined workspace!',
+          id: workspace.id,
+          workspace_name: workspace.workspace_name,
+          role: existingMember.role,
+          approved: true
+        });
+      } else if (existingMember.status === 'pending') {
+        return res.json({
+          message: 'Your join request for this workspace is already pending approval.',
+          pending: true,
+          workspace_name: workspace.workspace_name
+        });
+      } else {
+        return res.status(403).json({ message: 'Your request to join this workspace was previously rejected.' });
+      }
     }
 
-    // Update user's active workspace_id
-    const { error: userError } = await supabase
-      .from('users')
-      .update({ workspace_id: workspace.id })
-      .eq('id', req.user.id);
+    // Register user as pending member
+    const { error: joinError } = await supabase
+      .from('workspace_members')
+      .insert({
+        workspace_id: workspace.id,
+        user_id: req.user.id,
+        role: 'member',
+        status: 'pending'
+      });
 
-    if (userError) throw userError;
+    if (joinError) throw joinError;
 
     // Log Successful Attempt
     await supabase.from('workspace_join_attempts').insert({
@@ -164,10 +188,9 @@ export const joinWorkspace = async (req, res) => {
     });
 
     res.json({
-      message: 'Successfully joined workspace!',
-      id: workspace.id,
-      workspace_name: workspace.workspace_name,
-      role: 'member'
+      message: 'Join request submitted successfully! Please wait for the Admin to approve your access.',
+      pending: true,
+      workspace_name: workspace.workspace_name
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -193,10 +216,10 @@ export const getWorkspaceInfo = async (req, res) => {
       shareCode = deobfuscateCode(workspace.share_code) || 'N/A';
     }
 
-    // Fetch members list
+    // Fetch members list (including status)
     const { data: members, error: mError } = await supabase
       .from('workspace_members')
-      .select('role, joined_at, user:users(id, email, full_name)')
+      .select('status, role, joined_at, user:users(id, email, full_name)')
       .eq('workspace_id', req.workspace_id);
 
     if (mError) throw mError;
@@ -207,7 +230,8 @@ export const getWorkspaceInfo = async (req, res) => {
       email: m.user?.email || 'N/A',
       name: m.user?.full_name || 'Unnamed',
       role: m.role,
-      joinedAt: m.joined_at
+      joinedAt: m.joined_at,
+      status: m.status || 'approved'
     }));
 
     res.json({
@@ -319,6 +343,91 @@ export const removeWorkspaceMember = async (req, res) => {
     if (userError) throw userError;
 
     res.json({ message: 'Member successfully removed from workspace.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 6. Get Workspace Join Status for Onboarding Splash Gating
+export const getWorkspaceJoinStatus = async (req, res) => {
+  try {
+    const { data: request, error } = await supabase
+      .from('workspace_members')
+      .select('status, workspace:workspaces(id, workspace_name)')
+      .eq('user_id', req.user.id)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (request) {
+      res.json({
+        pending: true,
+        workspaceId: request.workspace?.id || null,
+        workspaceName: request.workspace?.workspace_name || 'N/A'
+      });
+    } else {
+      res.json({ pending: false });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 7. Cancel/Delete Pending Workspace Join Request
+export const cancelWorkspaceJoinRequest = async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('workspace_members')
+      .delete()
+      .eq('user_id', req.user.id)
+      .eq('status', 'pending');
+
+    if (error) throw error;
+
+    res.json({ message: 'Join request cancelled successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 8. Approve Workspace Join Request (Admin / Owner only)
+export const approveWorkspaceMember = async (req, res) => {
+  const { memberUserId } = req.body;
+  if (!memberUserId) {
+    return res.status(400).json({ message: 'Member User ID is required' });
+  }
+
+  try {
+    // Verify admin/ownership
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('owner_id')
+      .eq('id', req.workspace_id)
+      .single();
+
+    if (workspace.owner_id !== req.user.id && (req.user.role || '').toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to approve members.' });
+    }
+
+    // 1. Update status to approved in workspace_members
+    const { error: memberError } = await supabase
+      .from('workspace_members')
+      .update({ status: 'approved' })
+      .eq('workspace_id', req.workspace_id)
+      .eq('user_id', memberUserId);
+
+    if (memberError) throw memberError;
+
+    // 2. Update user's active workspace_id in users
+    const { error: userError } = await supabase
+      .from('users')
+      .update({ workspace_id: req.workspace_id })
+      .eq('id', memberUserId);
+
+    if (userError) throw userError;
+
+    res.json({ message: 'Workspace join request approved successfully!' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
