@@ -33,8 +33,18 @@ const RecipeManager = () => {
       const menuData = await menuRes.json();
       if (menuRes.ok) {
         setMenuItems(menuData);
-        // If an item was selected, sync its fresh state
-        if (selectedItem) {
+        
+        // Auto-select item if passed in URL query param
+        const params = new URLSearchParams(window.location.search);
+        const urlItemId = params.get('item_id');
+        let initialSelected = null;
+        if (urlItemId) {
+          initialSelected = menuData.find(m => m._id === urlItemId);
+        }
+
+        if (initialSelected) {
+          setSelectedItem(initialSelected);
+        } else if (selectedItem) {
           const fresh = menuData.find(m => m._id === selectedItem._id);
           if (fresh) setSelectedItem(fresh);
         }

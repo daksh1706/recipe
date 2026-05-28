@@ -232,8 +232,12 @@ const MenuManager = () => {
   };
 
   // View recipe redirect
-  const handleViewRecipe = () => {
-    navigate('/recipes');
+  const handleViewRecipe = (item) => {
+    if (item && item._id) {
+      navigate(`/recipes?item_id=${item._id}`, { state: { selectedItemId: item._id } });
+    } else {
+      navigate('/recipes');
+    }
   };
 
   // Local image uploading mock base64 reader
@@ -414,7 +418,7 @@ const MenuManager = () => {
 
               {/* Actions row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '0.85rem' }}>
-                <button onClick={handleViewRecipe} className="btn btn-secondary" style={{ height: '2rem', padding: 0, fontSize: '0.75rem', fontWeight: '800' }}>
+                <button onClick={() => handleViewRecipe(item)} className="btn btn-secondary" style={{ height: '2rem', padding: 0, fontSize: '0.75rem', fontWeight: '800' }}>
                   View Recipe
                 </button>
                 <button onClick={() => handleOpenModal(item)} className="btn btn-secondary" style={{ height: '2rem', padding: 0, color: 'var(--primary)' }} title="Edit"><Edit size={14} /></button>
@@ -471,7 +475,7 @@ const MenuManager = () => {
 
                   <td style={{ padding: '0.85rem 0.5rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={handleViewRecipe} className="btn btn-secondary" style={{ height: '1.8rem', padding: '0 0.5rem', fontSize: '0.7rem' }}>Recipe</button>
+                      <button onClick={() => handleViewRecipe(item)} className="btn btn-secondary" style={{ height: '1.8rem', padding: '0 0.5rem', fontSize: '0.7rem' }}>Recipe</button>
                       <button onClick={() => handleOpenModal(item)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)' }} title="Edit"><Edit size={14} /></button>
                       <button onClick={() => handleDeleteItem(item._id, item.name)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d9534f' }} title="Delete"><Trash2 size={14} /></button>
                     </div>

@@ -42,6 +42,58 @@ const formatStock = (stock, unit) => {
   return `${stock} ${unit}`;
 };
 
+const groupMenuItems = (items) => {
+  const grouped = [];
+  const processed = new Set();
+
+  for (const item of items) {
+    if (processed.has(item._id)) continue;
+
+    // Try to find if this item has a counterpart
+    const isIced = item.name.toLowerCase().includes('iced') || item.name.toLowerCase().includes('cold');
+    let baseName = item.name;
+    if (isIced) {
+      baseName = item.name
+        .replace(/iced/i, '')
+        .replace(/cold/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Look for a counterpart with matching normalized name
+    const counterpart = items.find(other => {
+      if (other._id === item._id || processed.has(other._id)) return false;
+      const otherIced = other.name.toLowerCase().includes('iced') || other.name.toLowerCase().includes('cold');
+      const otherBaseName = otherIced 
+        ? other.name.replace(/iced/i, '').replace(/cold/i, '').replace(/\s+/g, ' ').trim()
+        : other.name;
+      
+      return baseName.toLowerCase() === otherBaseName.toLowerCase() && (isIced !== otherIced);
+    });
+
+    if (counterpart) {
+      const hotItem = isIced ? counterpart : item;
+      const coldItem = isIced ? item : counterpart;
+
+      grouped.push({
+        type: 'grouped',
+        baseName: baseName.replace(/\(\s*\)/g, '').replace(/-\s*$/g, '').trim(),
+        hot: hotItem,
+        cold: coldItem
+      });
+      processed.add(hotItem._id);
+      processed.add(coldItem._id);
+    } else {
+      grouped.push({
+        type: 'single',
+        item: item
+      });
+      processed.add(item._id);
+    }
+  }
+  return grouped;
+};
+
 const POS = ({ auth }) => {
   const { showToast } = useContext(ToastContext);
   
@@ -825,102 +877,233 @@ const POS = ({ auth }) => {
             </div>
           ) : (
             <div className="pos-grid">
-              {filteredMenu.map(item => (
-                <div 
-                  key={item._id} 
-                  className="pos-item-card"
-                  onClick={() => addToCart(item)}
-                  style={{
-                    opacity: item.isAvailable ? 1 : 0.6,
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {/* Availability Badge Overlay */}
-                  {!item.isAvailable && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '10px',
-                      left: '10px',
-                      backgroundColor: 'var(--error)',
-                      color: 'white',
-                      fontSize: '0.6rem',
-                      fontWeight: '800',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '10px',
-                      zIndex: 2,
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase'
-                    }}>
-                      Out of stock
-                    </div>
-                  )}
-
-                  {/* Product Image with floating Customize button */}
-                  <div style={{
-                    width: '100%',
-                    height: '110px',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden',
-                    backgroundColor: 'var(--border-light)',
-                    position: 'relative'
-                  }}>
-                    {item.imageUrl ? (
-                      <img 
-                        src={item.imageUrl} 
-                        alt={item.name} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-subtle)' }}>
-                        <Coffee size={36} />
-                      </div>
-                    )}
-
-                    {/* Floating Customize pill — overlaid on image bottom */}
-                    {item.isAvailable && (
-                      <button
-                        onClick={(e) => openCustomize(e, item)}
-                        title="Build Your Own"
-                        className="customize-pill"
-                        style={{
+              {groupMenuItems(filteredMenu).map(group => {
+                if (group.type === 'single') {
+                  const item = group.item;
+                  return (
+                    <div 
+                      key={item._id} 
+                      className="pos-item-card"
+                      onClick={() => addToCart(item)}
+                      style={{
+                        opacity: item.isAvailable ? 1 : 0.6,
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {/* Availability Badge Overlay */}
+                      {!item.isAvailable && (
+                        <div style={{
                           position: 'absolute',
-                          bottom: '0',
-                          left: '0',
-                          right: '0',
-                          height: '28px',
-                          background: 'linear-gradient(135deg, rgba(140,98,57,0.92), rgba(180,130,80,0.92))',
-                          backdropFilter: 'blur(4px)',
+                          top: '10px',
+                          left: '10px',
+                          backgroundColor: 'var(--error)',
                           color: 'white',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '0.7rem',
+                          fontSize: '0.6rem',
                           fontWeight: '800',
-                          letterSpacing: '0.04em',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.3rem',
-                          transition: 'opacity 0.2s, transform 0.2s',
-                          opacity: 0,
-                          transform: 'translateY(4px)',
-                          zIndex: 3
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.transform = 'translateY(4px)'; }}
-                      >
-                        <Settings2 size={11} /> BUILD YOUR OWN
-                      </button>
-                    )}
-                  </div>
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '10px',
+                          zIndex: 2,
+                          letterSpacing: '0.05em',
+                          textTransform: 'uppercase'
+                        }}>
+                          Out of stock
+                        </div>
+                      )}
 
-                  <span className="pos-item-name">{item.name}</span>
-                  <span className="pos-item-category">{item.category.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
-                  <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
+                      {/* Product Image with floating Customize button */}
+                      <div style={{
+                        width: '100%',
+                        height: '110px',
+                        borderRadius: 'var(--radius-md)',
+                        overflow: 'hidden',
+                        backgroundColor: 'var(--border-light)',
+                        position: 'relative'
+                      }}>
+                        {item.imageUrl ? (
+                          <img 
+                            src={item.imageUrl} 
+                            alt={item.name} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-subtle)' }}>
+                            <Coffee size={36} />
+                          </div>
+                        )}
 
-                </div>
-              ))}
+                        {/* Floating Customize pill — overlaid on image bottom */}
+                        {item.isAvailable && (
+                          <button
+                            onClick={(e) => openCustomize(e, item)}
+                            title="Build Your Own"
+                            className="customize-pill"
+                            style={{
+                              position: 'absolute',
+                              bottom: '0',
+                              left: '0',
+                              right: '0',
+                              height: '28px',
+                              background: 'linear-gradient(135deg, rgba(140,98,57,0.92), rgba(180,130,80,0.92))',
+                              backdropFilter: 'blur(4px)',
+                              color: 'white',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '0.7rem',
+                              fontWeight: '800',
+                              letterSpacing: '0.04em',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.3rem',
+                              transition: 'opacity 0.2s, transform 0.2s',
+                              opacity: 0,
+                              transform: 'translateY(4px)',
+                              zIndex: 3
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.transform = 'translateY(4px)'; }}
+                          >
+                            <Settings2 size={11} /> BUILD YOUR OWN
+                          </button>
+                        )}
+                      </div>
+
+                      <span className="pos-item-name">{item.name}</span>
+                      <span className="pos-item-category">{item.category.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+                      <span className="pos-item-price">₹{Number(item.price).toFixed(2)}</span>
+
+                    </div>
+                  );
+                } else {
+                  const hot = group.hot;
+                  const cold = group.cold;
+                  return (
+                    <div 
+                      key={`${hot._id}-${cold._id}`}
+                      className="pos-item-card"
+                      style={{
+                        gridColumn: 'span 2',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        padding: '1.25rem',
+                        height: 'auto',
+                        minHeight: '220px',
+                        border: '2px dashed var(--primary-light, var(--border))',
+                        background: 'var(--bg-panel-light, rgba(140, 98, 57, 0.02))',
+                        gap: '0.75rem',
+                        cursor: 'default'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {group.baseName}
+                        </h4>
+                        <span style={{ fontSize: '0.65rem', backgroundColor: 'var(--primary-light, rgba(140, 98, 57, 0.1))', color: 'var(--primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                          Hot & Cold Dual Card
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.75rem', flex: 1 }}>
+                        {/* Hot side option */}
+                        <div 
+                          onClick={() => { if (hot.isAvailable) addToCart(hot); }}
+                          style={{
+                            flex: 1,
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '0.85rem 0.5rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: hot.isAvailable ? 'pointer' : 'not-allowed',
+                            backgroundColor: 'var(--bg-panel)',
+                            position: 'relative',
+                            transition: 'all 0.2s',
+                            opacity: hot.isAvailable ? 1 : 0.5
+                          }}
+                          className="hover-brighten grouped-side-option"
+                        >
+                          <div style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>☕</div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.5px' }}>🔥 HOT</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-main)' }}>₹{Number(hot.price).toFixed(2)}</span>
+                          
+                          {hot.isAvailable && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openCustomize(e, hot); }}
+                              style={{
+                                marginTop: '10px',
+                                background: 'linear-gradient(135deg, rgba(140,98,57,0.1), rgba(180,130,80,0.15))',
+                                border: '1px solid rgba(140,98,57,0.3)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '3px 8px',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                color: 'var(--primary)',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Customize
+                            </button>
+                          )}
+                          {!hot.isAvailable && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--error)', fontWeight: 800, marginTop: '10px' }}>OUT OF STOCK</span>
+                          )}
+                        </div>
+
+                        {/* Cold side option */}
+                        <div 
+                          onClick={() => { if (cold.isAvailable) addToCart(cold); }}
+                          style={{
+                            flex: 1,
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '0.85rem 0.5rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: cold.isAvailable ? 'pointer' : 'not-allowed',
+                            backgroundColor: 'var(--bg-panel)',
+                            position: 'relative',
+                            transition: 'all 0.2s',
+                            opacity: cold.isAvailable ? 1 : 0.5
+                          }}
+                          className="hover-brighten grouped-side-option"
+                        >
+                          <div style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>🥤</div>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#2b8a3e', letterSpacing: '0.5px' }}>❄️ ICED</span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-main)' }}>₹{Number(cold.price).toFixed(2)}</span>
+
+                          {cold.isAvailable && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openCustomize(e, cold); }}
+                              style={{
+                                marginTop: '10px',
+                                background: 'linear-gradient(135deg, rgba(43,138,62,0.1), rgba(43,138,62,0.15))',
+                                border: '1px solid rgba(43,138,62,0.3)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '3px 8px',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                color: '#2b8a3e',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Customize
+                            </button>
+                          )}
+                          {!cold.isAvailable && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--error)', fontWeight: 800, marginTop: '10px' }}>OUT OF STOCK</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
             </div>
           )}
         </div>
