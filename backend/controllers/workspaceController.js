@@ -224,8 +224,28 @@ export const getWorkspaceInfo = async (req, res) => {
 
     if (mError) throw mError;
 
+    // Fetch workspace owner's user profile details to ensure they are always displayed
+    let ownerDetails = null;
+    if (workspace.owner_id) {
+      const { data: ownerUser } = await supabase
+        .from('users')
+        .select('id, email, full_name, role, created_at')
+        .eq('id', workspace.owner_id)
+        .maybeSingle();
+      if (ownerUser) {
+        ownerDetails = {
+          userId: ownerUser.id,
+          email: ownerUser.email,
+          name: ownerUser.full_name || 'Owner',
+          role: 'owner',
+          joinedAt: ownerUser.created_at,
+          status: 'approved'
+        };
+      }
+    }
+
     // Format member results
-    const formattedMembers = members.map(m => ({
+    let formattedMembers = members.map(m => ({
       userId: m.user?.id || 'unknown',
       email: m.user?.email || 'N/A',
       name: m.user?.full_name || 'Unnamed',
@@ -233,6 +253,17 @@ export const getWorkspaceInfo = async (req, res) => {
       joinedAt: m.joined_at,
       status: m.status || 'approved'
     }));
+
+    if (ownerDetails) {
+      const ownerExists = formattedMembers.some(m => m.userId === ownerDetails.userId);
+      if (!ownerExists) {
+        formattedMembers = [ownerDetails, ...formattedMembers];
+      } else {
+        formattedMembers = formattedMembers.map(m => 
+          m.userId === ownerDetails.userId ? { ...m, role: 'owner' } : m
+        );
+      }
+    }
 
     res.json({
       workspaceId: workspace.id,
