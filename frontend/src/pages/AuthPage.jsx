@@ -57,15 +57,18 @@ const AuthPage = ({ setAuth }) => {
           navigate('/dashboard');
         }
       } else {
+        localStorage.setItem('userInfo', JSON.stringify(data));
+        setAuth(data);
         if (data.role === 'admin') {
-          localStorage.setItem('userInfo', JSON.stringify(data));
-          setAuth(data);
           showToast(`Welcome! Workspace auto-created and logged in as Administrator: ${data.full_name || 'User'}`, 'success');
           navigate('/dashboard');
         } else {
-          showToast('Access request submitted successfully! Pending Admin approval.', 'success');
-          setIsLogin(true);
-          setPassword('');
+          showToast(`Account registered and logged in successfully, ${data.full_name || 'User'}!`, 'success');
+          if (data.role === 'barista') {
+            navigate('/orders');
+          } else {
+            navigate('/dashboard');
+          }
         }
       }
     } catch (err) {
