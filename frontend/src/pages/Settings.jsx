@@ -401,6 +401,9 @@ const Settings = ({ userRole = 'admin', auth }) => {
         const data = await res.json();
         setPendingUsers(data);
       }
+      
+      // Also fetch workspace info so we get the latest pending workspace members
+      await fetchWorkspaceInfo();
     } catch (err) {
       // silent
     } finally {
@@ -733,7 +736,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
                 }}
               >
                 <UserCheck size={18} /> Access Requests
-                {pendingUsers.length > 0 && (
+                {(pendingUsers.length > 0 || (workspaceInfo && workspaceInfo.members.filter(m => m.status === 'pending').length > 0)) && (
                   <span style={{
                     position: 'absolute',
                     top: '8px',
@@ -750,7 +753,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
                     justifyContent: 'center',
                     lineHeight: 1
                   }}>
-                    {pendingUsers.length}
+                    {pendingUsers.length + (workspaceInfo ? workspaceInfo.members.filter(m => m.status === 'pending').length : 0)}
                   </span>
                 )}
               </button>
@@ -1531,7 +1534,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
                     <UserCheck size={20} color="var(--primary)" /> Access Requests
                   </h2>
                   <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Review and action staff registration requests
+                    Review and action staff registration and workspace join requests
                   </p>
                 </div>
                 <button
@@ -1547,7 +1550,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {[1,2].map(i => <div key={i} className="skeleton" style={{ height: '90px', borderRadius: 'var(--radius-md)' }} />)}
                 </div>
-              ) : pendingUsers.length === 0 ? (
+              ) : (pendingUsers.length === 0 && (!workspaceInfo || workspaceInfo.members.filter(m => m.status === 'pending').length === 0)) ? (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                   padding: '4rem 2rem', textAlign: 'center',
@@ -1559,6 +1562,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* System Level Requests (if any exist) */}
                   {pendingUsers.map(u => (
                     <ApprovalCard
                       key={u.id}
@@ -1566,6 +1570,70 @@ const Settings = ({ userRole = 'admin', auth }) => {
                       onApprove={handleApproveUser}
                       onReject={handleRejectUser}
                     />
+                  ))}
+
+                  {/* Workspace Level Join Requests */}
+                  {workspaceInfo && workspaceInfo.members.filter(m => m.status === 'pending').map(m => (
+                    <div key={m.userId} className="glass" style={{ 
+                      padding: '1.25rem', 
+                      borderRadius: 'var(--radius-md)', 
+                      border: '1px solid var(--border)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      backgroundColor: 'rgba(255, 255, 255, 0.6)'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: '800', color: 'var(--text-main)' }}>{m.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{m.email}</div>
+                        <span style={{ 
+                          fontSize: '0.7rem', 
+                          fontWeight: '700', 
+                          textTransform: 'uppercase', 
+                          backgroundColor: 'rgba(245, 158, 11, 0.1)', 
+                          color: '#f59e0b', 
+                          padding: '0.1rem 0.4rem', 
+                          borderRadius: '4px' 
+                        }}>
+                          Pending Workspace Join Request
+                        </span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => handleApproveJoin(m.userId, m.name)}
+                          className="btn btn-primary"
+                          style={{
+                            padding: '0.5rem 1rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => handleRemoveMember(m.userId, m.name, true)}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '0.5rem 1rem',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

@@ -49,6 +49,19 @@ export const registerUser = async (req, res) => {
 
     if (error) throw error;
 
+    // Fail-safe status check: if database defaults or triggers forced status to 'pending', immediately update it to 'approved'
+    if (user && user.status !== 'approved') {
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({ status: 'approved' })
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (!updateError && updatedUser) {
+        user.status = 'approved';
+      }
+    }
+
     let finalWorkspaceId = null;
     if (user && targetRole === 'admin') {
       // Automatically create a workspace for the registered admin
