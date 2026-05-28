@@ -103,6 +103,10 @@ const InventoryDashboard = ({ userRole }) => {
     { value: 'fruits', label: 'Fruits' },
     { value: 'packaging', label: 'Packaging Cups' },
     { value: 'cleaning', label: 'Cleaning Supplies' },
+    { value: 'chocolate_cocoa', label: 'Chocolate & Cocoa' },
+    { value: 'fruits_veg', label: 'Fresh Produce' },
+    { value: 'specialty', label: 'Dried & Specialty' },
+    { value: 'dry_goods', label: 'Dry Goods' },
     { value: 'other', label: 'Other Items' }
   ];
 

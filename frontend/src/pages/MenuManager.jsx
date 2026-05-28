@@ -64,7 +64,7 @@ const MenuManager = () => {
   const [itemCode, setItemCode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('hot_coffee');
+  const [category, setCategory] = useState('espresso');
   const [price, setPrice] = useState('');
   const [gstPercent, setGstPercent] = useState(5.0);
   const [isAvailable, setIsAvailable] = useState(true);
@@ -72,12 +72,17 @@ const MenuManager = () => {
 
   const categories = [
     { value: 'all', label: 'All Items' },
-    { value: 'hot_coffee', label: 'Hot Coffee' },
-    { value: 'cold_coffee', label: 'Cold Coffee' },
+    { value: 'espresso', label: 'Espresso' },
+    { value: 'latte', label: 'Latte' },
+    { value: 'cappuccino', label: 'Cappuccino' },
+    { value: 'mocha', label: 'Mocha' },
+    { value: 'americano', label: 'Americano' },
+    { value: 'flat_white', label: 'Flat White' },
+    { value: 'macchiato', label: 'Macchiato' },
     { value: 'frappuccino', label: 'Frappuccino' },
-    { value: 'soda', label: 'Sodas' },
-    { value: 'light_bites', label: 'Light Bites' },
-    { value: 'savoury_bites', label: 'Savoury Bites' }
+    { value: 'cold_brew', label: 'Cold Brews' },
+    { value: 'soda', label: 'Sodas & Cold Drinks' },
+    { value: 'light_bites', label: 'Light Bites' }
   ];
 
   // Auto-generate code on Category Change
@@ -154,8 +159,8 @@ const MenuManager = () => {
       setEditItem(null);
       setName('');
       setDescription('');
-      setCategory('hot_coffee');
-      const nextCode = generateNextCode('hot_coffee', menuItems);
+      setCategory('espresso');
+      const nextCode = generateNextCode('espresso', menuItems);
       setItemCode(nextCode);
       setPrice('');
       setGstPercent(5.0);
@@ -514,12 +519,17 @@ const MenuManager = () => {
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Category Classification</label>
                   <select value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
-                    <option value="hot_coffee">Hot Coffee</option>
-                    <option value="cold_coffee">Cold Coffee</option>
+                    <option value="espresso">Espresso</option>
+                    <option value="latte">Latte</option>
+                    <option value="cappuccino">Cappuccino</option>
+                    <option value="mocha">Mocha</option>
+                    <option value="americano">Americano</option>
+                    <option value="flat_white">Flat White</option>
+                    <option value="macchiato">Macchiato</option>
                     <option value="frappuccino">Frappuccino</option>
-                    <option value="soda">Sodas & Drinks</option>
+                    <option value="cold_brew">Cold Brews</option>
+                    <option value="soda">Sodas & Cold Drinks</option>
                     <option value="light_bites">Light Bites</option>
-                    <option value="savoury_bites">Savoury Bites</option>
                   </select>
                 </div>
               </div>

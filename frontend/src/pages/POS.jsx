@@ -91,12 +91,17 @@ const POS = ({ auth }) => {
   // Categories list mapped from requirements
   const categories = [
     { value: 'all', label: 'All Items' },
-    { value: 'hot_coffee', label: 'Hot Coffee' },
-    { value: 'cold_coffee', label: 'Cold Coffee' },
+    { value: 'espresso', label: 'Espresso' },
+    { value: 'latte', label: 'Latte' },
+    { value: 'cappuccino', label: 'Cappuccino' },
+    { value: 'mocha', label: 'Mocha' },
+    { value: 'americano', label: 'Americano' },
+    { value: 'flat_white', label: 'Flat White' },
+    { value: 'macchiato', label: 'Macchiato' },
     { value: 'frappuccino', label: 'Frappuccino' },
-    { value: 'soda', label: 'Sodas' },
-    { value: 'light_bites', label: 'Light Bites' },
-    { value: 'savoury_bites', label: 'Savoury Bites' }
+    { value: 'cold_brew', label: 'Cold Brews' },
+    { value: 'soda', label: 'Sodas & Cold Drinks' },
+    { value: 'light_bites', label: 'Light Bites' }
   ];
 
   // 1. Fetch Menu Items — with auto-retry only for server/network errors (not auth errors)

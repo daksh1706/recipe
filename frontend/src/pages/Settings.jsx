@@ -306,12 +306,17 @@ const Settings = ({ userRole = 'admin', auth }) => {
   const [gstConfig, setGstConfig] = useState(() => {
     const saved = localStorage.getItem('gstConfig');
     return saved ? JSON.parse(saved) : {
-      hot_coffee: 5,
-      cold_coffee: 5,
+      espresso: 5,
+      latte: 5,
+      cappuccino: 5,
+      mocha: 5,
+      americano: 5,
+      flat_white: 5,
+      macchiato: 5,
       frappuccino: 5,
+      cold_brew: 5,
       soda: 12,
-      light_bites: 12,
-      savoury_bites: 12
+      light_bites: 12
     };
   });
 
