@@ -97,8 +97,10 @@ const InventoryDashboard = ({ userRole }) => {
 
   const categories = [
     { value: 'coffee_beans', label: 'Coffee Beans' },
-    { value: 'milk_dairy', label: 'Milk & Dairy' },
-    { value: 'syrups_sauces', label: 'Syrups & Sauces' },
+    { value: 'milk', label: 'Milk Type' },
+    { value: 'dairy', label: 'Dairy & Cheese' },
+    { value: 'syrups', label: 'Beverage Syrups' },
+    { value: 'sauces', label: 'Beverage Sauces' },
     { value: 'bakery', label: 'Bakery Pastries' },
     { value: 'fruits', label: 'Fruits' },
     { value: 'packaging', label: 'Packaging Cups' },

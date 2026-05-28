@@ -170,7 +170,7 @@ async function seed() {
     {
       item_code: 'RM-MLK-002',
       name: 'Whole Milk',
-      category: 'milk_dairy',
+      category: 'milk',
       unit: 'ml',
       current_stock: 45000, // 45 Liters
       minimum_stock_level: 10000,
@@ -183,7 +183,7 @@ async function seed() {
     {
       item_code: 'RM-SYR-003',
       name: 'Vanilla Syrup',
-      category: 'syrups_sauces',
+      category: 'syrups',
       unit: 'ml',
       current_stock: 5000, // 5 Bottles of 1L
       minimum_stock_level: 1000,
@@ -196,7 +196,7 @@ async function seed() {
     {
       item_code: 'RM-SYR-004',
       name: 'Caramel Sauce',
-      category: 'syrups_sauces',
+      category: 'sauces',
       unit: 'ml',
       current_stock: 800, // 800 ml
       minimum_stock_level: 1000, // Trigger low stock!
