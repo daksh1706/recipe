@@ -16,7 +16,7 @@ async function fixConstraints() {
   const sqlStatements = [
     // Fix raw_materials category constraint
     `ALTER TABLE raw_materials DROP CONSTRAINT IF EXISTS raw_materials_category_check`,
-    `ALTER TABLE raw_materials ADD CONSTRAINT raw_materials_category_check CHECK (category IN ('coffee_beans', 'milk_dairy', 'syrups_sauces', 'bakery', 'fruits', 'packaging', 'cleaning', 'other', 'chocolate_cocoa', 'fruits_veg', 'specialty', 'dry_goods'))`,
+    `ALTER TABLE raw_materials ADD CONSTRAINT raw_materials_category_check CHECK (category IN ('coffee_beans', 'milk_dairy', 'syrups_sauces', 'bakery', 'fruits', 'packaging', 'cleaning', 'other', 'chocolate_cocoa', 'fruits_veg', 'specialty', 'dry_goods', 'milk', 'dairy', 'syrups', 'sauces'))`,
     // Fix raw_materials unit constraint (add slice)
     `ALTER TABLE raw_materials DROP CONSTRAINT IF EXISTS raw_materials_unit_check`,
     `ALTER TABLE raw_materials ADD CONSTRAINT raw_materials_unit_check CHECK (unit IN ('ml', 'l', 'g', 'kg', 'pinch', 'piece', 'tsp', 'tbsp', 'cup', 'slice'))`,

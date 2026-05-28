@@ -20,43 +20,43 @@ const rawMaterialsData = [
   { item_code: 'RM-ING-002', name: 'Coarse ground dark roast coffee', category: 'coffee_beans', unit: 'kg', current_stock: 30.0, cost_per_unit: 750.0 },
   { item_code: 'RM-ING-003', name: 'Instant espresso powder', category: 'coffee_beans', unit: 'kg', current_stock: 5.0, cost_per_unit: 1200.0 },
 
-  // 2. DAIRY & DAIRY ALTERNATIVES (milk_dairy)
-  { item_code: 'RM-ING-004', name: 'Whole milk', category: 'milk_dairy', unit: 'l', current_stock: 200.0, cost_per_unit: 60.0 },
-  { item_code: 'RM-ING-005', name: 'Heavy cream / double cream', category: 'milk_dairy', unit: 'l', current_stock: 50.0, cost_per_unit: 250.0 },
-  { item_code: 'RM-ING-006', name: 'Coconut cream', category: 'milk_dairy', unit: 'l', current_stock: 30.0, cost_per_unit: 180.0 },
-  { item_code: 'RM-ING-007', name: 'Sweetened condensed milk', category: 'milk_dairy', unit: 'kg', current_stock: 40.0, cost_per_unit: 150.0 },
-  { item_code: 'RM-ING-008', name: 'Unsalted butter', category: 'milk_dairy', unit: 'kg', current_stock: 25.0, cost_per_unit: 500.0 },
-  { item_code: 'RM-ING-009', name: 'Whipped cream', category: 'milk_dairy', unit: 'kg', current_stock: 15.0, cost_per_unit: 350.0 },
-  { item_code: 'RM-ING-010', name: 'Vanilla ice cream', category: 'milk_dairy', unit: 'kg', current_stock: 20.0, cost_per_unit: 220.0 },
-  { item_code: 'RM-ING-011', name: 'Chocolate ice cream', category: 'milk_dairy', unit: 'kg', current_stock: 10.0, cost_per_unit: 240.0 },
+  // 2. DAIRY & DAIRY ALTERNATIVES (milk / dairy)
+  { item_code: 'RM-ING-004', name: 'Whole milk', category: 'milk', unit: 'l', current_stock: 200.0, cost_per_unit: 60.0 },
+  { item_code: 'RM-ING-005', name: 'Heavy cream / double cream', category: 'milk', unit: 'l', current_stock: 50.0, cost_per_unit: 250.0 },
+  { item_code: 'RM-ING-006', name: 'Coconut cream', category: 'milk', unit: 'l', current_stock: 30.0, cost_per_unit: 180.0 },
+  { item_code: 'RM-ING-007', name: 'Sweetened condensed milk', category: 'dairy', unit: 'kg', current_stock: 40.0, cost_per_unit: 150.0 },
+  { item_code: 'RM-ING-008', name: 'Unsalted butter', category: 'dairy', unit: 'kg', current_stock: 25.0, cost_per_unit: 500.0 },
+  { item_code: 'RM-ING-009', name: 'Whipped cream', category: 'dairy', unit: 'kg', current_stock: 15.0, cost_per_unit: 350.0 },
+  { item_code: 'RM-ING-010', name: 'Vanilla ice cream', category: 'dairy', unit: 'kg', current_stock: 20.0, cost_per_unit: 220.0 },
+  { item_code: 'RM-ING-011', name: 'Chocolate ice cream', category: 'dairy', unit: 'kg', current_stock: 10.0, cost_per_unit: 240.0 },
 
-  // 3. CHOCOLATE & COFFEE SAUCE (chocolate_cocoa)
+  // 3. CHOCOLATE & COFFEE SAUCE (sauces / chocolate_cocoa)
   { item_code: 'RM-ING-012', name: 'Dark chocolate (70% cocoa)', category: 'chocolate_cocoa', unit: 'kg', current_stock: 15.0, cost_per_unit: 600.0 },
   { item_code: 'RM-ING-013', name: 'Milk chocolate', category: 'chocolate_cocoa', unit: 'kg', current_stock: 10.0, cost_per_unit: 550.0 },
   { item_code: 'RM-ING-014', name: 'White chocolate', category: 'chocolate_cocoa', unit: 'kg', current_stock: 8.0, cost_per_unit: 650.0 },
-  { item_code: 'RM-ING-015', name: 'Chocolate sauce (ready-made)', category: 'chocolate_cocoa', unit: 'l', current_stock: 20.0, cost_per_unit: 280.0 },
-  { item_code: 'RM-ING-016', name: 'White chocolate sauce', category: 'chocolate_cocoa', unit: 'l', current_stock: 10.0, cost_per_unit: 320.0 },
+  { item_code: 'RM-ING-015', name: 'Chocolate sauce (ready-made)', category: 'sauces', unit: 'l', current_stock: 20.0, cost_per_unit: 280.0 },
+  { item_code: 'RM-ING-016', name: 'White chocolate sauce', category: 'sauces', unit: 'l', current_stock: 10.0, cost_per_unit: 320.0 },
   { item_code: 'RM-ING-017', name: 'Cocoa powder', category: 'chocolate_cocoa', unit: 'kg', current_stock: 10.0, cost_per_unit: 450.0 },
 
-  // 4. SYRUPS (syrups_sauces)
-  { item_code: 'RM-ING-018', name: 'Vanilla syrup', category: 'syrups_sauces', unit: 'l', current_stock: 25.0, cost_per_unit: 350.0 },
-  { item_code: 'RM-ING-019', name: 'Caramel syrup', category: 'syrups_sauces', unit: 'l', current_stock: 25.0, cost_per_unit: 350.0 },
-  { item_code: 'RM-ING-020', name: 'Caramel sauce (thick)', category: 'syrups_sauces', unit: 'l', current_stock: 15.0, cost_per_unit: 400.0 },
-  { item_code: 'RM-ING-021', name: 'Hazelnut syrup', category: 'syrups_sauces', unit: 'l', current_stock: 20.0, cost_per_unit: 380.0 },
-  { item_code: 'RM-ING-022', name: 'Rose syrup', category: 'syrups_sauces', unit: 'l', current_stock: 12.0, cost_per_unit: 360.0 },
-  { item_code: 'RM-ING-023', name: 'Lavender syrup', category: 'syrups_sauces', unit: 'l', current_stock: 12.0, cost_per_unit: 360.0 },
-  { item_code: 'RM-ING-024', name: 'Brown sugar syrup', category: 'syrups_sauces', unit: 'l', current_stock: 15.0, cost_per_unit: 300.0 },
-  { item_code: 'RM-ING-025', name: 'Toffee syrup', category: 'syrups_sauces', unit: 'l', current_stock: 10.0, cost_per_unit: 380.0 },
-  { item_code: 'RM-ING-026', name: 'Strawberry syrup', category: 'syrups_sauces', unit: 'l', current_stock: 15.0, cost_per_unit: 320.0 },
-  { item_code: 'RM-ING-027', name: 'Raspberry syrup', category: 'syrups_sauces', unit: 'l', current_stock: 10.0, cost_per_unit: 320.0 },
-  { item_code: 'RM-ING-028', name: 'Peach syrup', category: 'syrups_sauces', unit: 'l', current_stock: 12.0, cost_per_unit: 340.0 },
-  { item_code: 'RM-ING-029', name: 'Passionfruit syrup', category: 'syrups_sauces', unit: 'l', current_stock: 10.0, cost_per_unit: 360.0 },
-  { item_code: 'RM-ING-030', name: 'Mango syrup', category: 'syrups_sauces', unit: 'l', current_stock: 10.0, cost_per_unit: 340.0 },
-  { item_code: 'RM-ING-031', name: 'Blue curacao syrup (non-alcoholic)', category: 'syrups_sauces', unit: 'l', current_stock: 8.0, cost_per_unit: 380.0 },
-  { item_code: 'RM-ING-032', name: 'Coconut syrup', category: 'syrups_sauces', unit: 'l', current_stock: 8.0, cost_per_unit: 380.0 },
-  { item_code: 'RM-ING-033', name: 'Grenadine', category: 'syrups_sauces', unit: 'l', current_stock: 5.0, cost_per_unit: 400.0 },
-  { item_code: 'RM-ING-034', name: 'Mint / peppermint syrup', category: 'syrups_sauces', unit: 'l', current_stock: 10.0, cost_per_unit: 350.0 },
-  { item_code: 'RM-ING-035', name: 'Simple syrup (house-made)', category: 'syrups_sauces', unit: 'l', current_stock: 30.0, cost_per_unit: 100.0 },
+  // 4. SYRUPS & SAUCES (syrups / sauces)
+  { item_code: 'RM-ING-018', name: 'Vanilla syrup', category: 'syrups', unit: 'l', current_stock: 25.0, cost_per_unit: 350.0 },
+  { item_code: 'RM-ING-019', name: 'Caramel syrup', category: 'syrups', unit: 'l', current_stock: 25.0, cost_per_unit: 350.0 },
+  { item_code: 'RM-ING-020', name: 'Caramel sauce (thick)', category: 'sauces', unit: 'l', current_stock: 15.0, cost_per_unit: 400.0 },
+  { item_code: 'RM-ING-021', name: 'Hazelnut syrup', category: 'syrups', unit: 'l', current_stock: 20.0, cost_per_unit: 380.0 },
+  { item_code: 'RM-ING-022', name: 'Rose syrup', category: 'syrups', unit: 'l', current_stock: 12.0, cost_per_unit: 360.0 },
+  { item_code: 'RM-ING-023', name: 'Lavender syrup', category: 'syrups', unit: 'l', current_stock: 12.0, cost_per_unit: 360.0 },
+  { item_code: 'RM-ING-024', name: 'Brown sugar syrup', category: 'syrups', unit: 'l', current_stock: 15.0, cost_per_unit: 300.0 },
+  { item_code: 'RM-ING-025', name: 'Toffee syrup', category: 'syrups', unit: 'l', current_stock: 10.0, cost_per_unit: 380.0 },
+  { item_code: 'RM-ING-026', name: 'Strawberry syrup', category: 'syrups', unit: 'l', current_stock: 15.0, cost_per_unit: 320.0 },
+  { item_code: 'RM-ING-027', name: 'Raspberry syrup', category: 'syrups', unit: 'l', current_stock: 10.0, cost_per_unit: 320.0 },
+  { item_code: 'RM-ING-028', name: 'Peach syrup', category: 'syrups', unit: 'l', current_stock: 12.0, cost_per_unit: 340.0 },
+  { item_code: 'RM-ING-029', name: 'Passionfruit syrup', category: 'syrups', unit: 'l', current_stock: 10.0, cost_per_unit: 360.0 },
+  { item_code: 'RM-ING-030', name: 'Mango syrup', category: 'syrups', unit: 'l', current_stock: 10.0, cost_per_unit: 340.0 },
+  { item_code: 'RM-ING-031', name: 'Blue curacao syrup (non-alcoholic)', category: 'syrups', unit: 'l', current_stock: 8.0, cost_per_unit: 380.0 },
+  { item_code: 'RM-ING-032', name: 'Coconut syrup', category: 'syrups', unit: 'l', current_stock: 8.0, cost_per_unit: 380.0 },
+  { item_code: 'RM-ING-033', name: 'Grenadine', category: 'syrups', unit: 'l', current_stock: 5.0, cost_per_unit: 400.0 },
+  { item_code: 'RM-ING-034', name: 'Mint / peppermint syrup', category: 'syrups', unit: 'l', current_stock: 10.0, cost_per_unit: 350.0 },
+  { item_code: 'RM-ING-035', name: 'Simple syrup (house-made)', category: 'syrups', unit: 'l', current_stock: 30.0, cost_per_unit: 100.0 },
 
   // 5. BAKING — DRY GOODS (dry_goods)
   { item_code: 'RM-ING-036', name: 'All-purpose flour', category: 'dry_goods', unit: 'kg', current_stock: 50.0, cost_per_unit: 50.0 },
@@ -67,11 +67,11 @@ const rawMaterialsData = [
   { item_code: 'RM-ING-041', name: 'Baking soda', category: 'dry_goods', unit: 'kg', current_stock: 5.0, cost_per_unit: 120.0 },
   { item_code: 'RM-ING-042', name: 'Salt', category: 'dry_goods', unit: 'kg', current_stock: 10.0, cost_per_unit: 20.0 },
 
-  // 6. BAKING — WET GOODS (bakery)
+  // 6. BAKING — WET GOODS (bakery / sauces)
   { item_code: 'RM-ING-043', name: 'Eggs (whole)', category: 'bakery', unit: 'piece', current_stock: 300.0, cost_per_unit: 6.0 },
   { item_code: 'RM-ING-044', name: 'Vanilla extract', category: 'bakery', unit: 'ml', current_stock: 2000.0, cost_per_unit: 2.0 },
   { item_code: 'RM-ING-045', name: 'Rose water', category: 'bakery', unit: 'ml', current_stock: 1000.0, cost_per_unit: 1.5 },
-  { item_code: 'RM-ING-046', name: 'Hazelnut spread (e.g. Nutella)', category: 'bakery', unit: 'kg', current_stock: 15.0, cost_per_unit: 600.0 },
+  { item_code: 'RM-ING-046', name: 'Hazelnut spread (e.g. Nutella)', category: 'sauces', unit: 'kg', current_stock: 15.0, cost_per_unit: 600.0 },
 
   // 7. FRESH PRODUCE (fruits_veg)
   { item_code: 'RM-ING-047', name: 'Limes (fresh)', category: 'fruits_veg', unit: 'piece', current_stock: 150.0, cost_per_unit: 5.0 },
@@ -88,13 +88,13 @@ const rawMaterialsData = [
   { item_code: 'RM-ING-056', name: 'Sea salt', category: 'specialty', unit: 'g', current_stock: 500.0, cost_per_unit: 0.6 },
   { item_code: 'RM-ING-057', name: 'Cardamom', category: 'specialty', unit: 'g', current_stock: 300.0, cost_per_unit: 1.5 },
 
-  // 9. CAFÉ FOOD ITEMS (other)
+  // 9. CAFÉ FOOD ITEMS (other / dairy)
   { item_code: 'RM-ING-058', name: 'Pasta (penne or fettuccine)', category: 'other', unit: 'kg', current_stock: 25.0, cost_per_unit: 150.0 },
   { item_code: 'RM-ING-059', name: 'Garlic cloves (fresh)', category: 'other', unit: 'g', current_stock: 1000.0, cost_per_unit: 0.2 },
-  { item_code: 'RM-ING-060', name: 'Parmesan cheese (grated)', category: 'other', unit: 'kg', current_stock: 10.0, cost_per_unit: 1200.0 },
+  { item_code: 'RM-ING-060', name: 'Parmesan cheese (grated)', category: 'dairy', unit: 'kg', current_stock: 10.0, cost_per_unit: 1200.0 },
   { item_code: 'RM-ING-061', name: 'Sourdough or ciabatta bread', category: 'other', unit: 'piece', current_stock: 40.0, cost_per_unit: 60.0 },
   { item_code: 'RM-ING-062', name: 'Sandwich fillings: chicken, tuna, or vegetables', category: 'other', unit: 'kg', current_stock: 15.0, cost_per_unit: 450.0 },
-  { item_code: 'RM-ING-063', name: 'Cheese slices', category: 'other', unit: 'piece', current_stock: 200.0, cost_per_unit: 12.0 },
+  { item_code: 'RM-ING-063', name: 'Cheese slices', category: 'dairy', unit: 'piece', current_stock: 200.0, cost_per_unit: 12.0 },
   { item_code: 'RM-ING-064', name: 'Lettuce, tomato, cucumber', category: 'other', unit: 'g', current_stock: 3000.0, cost_per_unit: 0.1 },
   { item_code: 'RM-ING-065', name: 'Mayonnaise / mustard / sauce', category: 'other', unit: 'kg', current_stock: 15.0, cost_per_unit: 200.0 },
 

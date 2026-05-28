@@ -111,10 +111,9 @@ const POS = ({ auth }) => {
   
   // Customization categories in order
   const CUST_CATEGORIES = [
-    { key: 'milk_dairy',    label: 'Milk Type',    emoji: '🥛', multi: false },
-    { key: 'syrups_sauces',label: 'Syrups',       emoji: '🍯', multi: true  },
-    { key: 'coffee_beans', label: 'Coffee Shot',  emoji: '☕', multi: false },
-    { key: 'other',        label: 'Extras',       emoji: '✨', multi: true  },
+    { key: 'milk',          label: 'Milk Type',        emoji: '🥛', multi: false },
+    { key: 'syrups',        label: 'Syrups & Sauces',  emoji: '🍯', multi: true, categories: ['syrups', 'sauces'] },
+    { key: 'coffee_beans',  label: 'Coffee Shot',      emoji: '☕', multi: false },
   ];
   
   // Search & Filters
@@ -1376,7 +1375,12 @@ const POS = ({ auth }) => {
             <div style={{ padding: '0.75rem 1.5rem', maxHeight: '240px', overflowY: 'auto' }} className="custom-scroll">
               {(() => {
                 const cat = CUST_CATEGORIES[custModal.step];
-                const options = rawMaterials.filter(m => m.category === cat.key);
+                const options = rawMaterials.filter(m => {
+                  if (cat.categories) {
+                    return cat.categories.includes(m.category);
+                  }
+                  return m.category === cat.key;
+                });
                 const currentVal = custModal.selections[cat.key];
 
                 if (options.length === 0) {
