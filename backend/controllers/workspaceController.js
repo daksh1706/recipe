@@ -518,3 +518,40 @@ export const updateWorkspaceShareCode = async (req, res) => {
   }
 };
 
+// 10. Update Workspace Name (Admin / Owner only)
+export const updateWorkspaceName = async (req, res) => {
+  const { workspace_name } = req.body;
+  if (!workspace_name || !workspace_name.trim()) {
+    return res.status(400).json({ message: 'Workspace name is required.' });
+  }
+
+  try {
+    // Verify admin/ownership
+    const { data: workspace, error: wsError } = await supabase
+      .from('workspaces')
+      .select('owner_id')
+      .eq('id', req.workspace_id)
+      .single();
+
+    if (wsError) throw wsError;
+
+    if (workspace.owner_id !== req.user.id && (req.user.role || '').toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only the workspace owner is authorized to rename the workspace.' });
+    }
+
+    const { error: updateError } = await supabase
+      .from('workspaces')
+      .update({ workspace_name: workspace_name.trim() })
+      .eq('id', req.workspace_id);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      message: 'Workspace renamed successfully!',
+      workspace_name: workspace_name.trim()
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ThemeContext } from '../App';
+import { ThemeContext, ToastContext } from '../App';
 import { 
   ShoppingCart, 
   Package, 
@@ -19,11 +19,125 @@ import {
   MessageSquare,
   Sun,
   Moon,
-  ChevronRight
+  ChevronRight,
+  Check,
+  X,
+  Edit2
 } from 'lucide-react';
 
 const Sidebar = ({ setAuth, role, auth, handleLogout }) => {
   const { darkMode, toggleTheme } = useContext(ThemeContext);
+  const { showToast } = React.useContext(ToastContext);
+
+  const [workspaceName, setWorkspaceName] = React.useState(() => {
+    const userInfoStr = localStorage.getItem('userInfo');
+    if (userInfoStr) {
+      const userInfo = JSON.parse(userInfoStr);
+      if (userInfo.workspace_name) {
+        return userInfo.workspace_name;
+      }
+    }
+    return 'CRFTD COFFEE';
+  });
+
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState(workspaceName);
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  // Sync editValue when workspaceName updates externally
+  React.useEffect(() => {
+    setEditValue(workspaceName);
+  }, [workspaceName]);
+
+  // Synchronize document title to match the workspace name
+  React.useEffect(() => {
+    if (workspaceName) {
+      document.title = `${workspaceName} | POS & Management`;
+    }
+  }, [workspaceName]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setEditValue(workspaceName);
+      setIsEditing(false);
+    }
+  };
+
+  const handleSave = async (e) => {
+    if (e) e.preventDefault();
+    if (!editValue.trim()) {
+      showToast?.('Workspace name cannot be empty', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/workspace/rename', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth?.token}`
+        },
+        body: JSON.stringify({ workspace_name: editValue.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast?.('Workspace renamed successfully!', 'success');
+        setWorkspaceName(data.workspace_name);
+        setIsEditing(false);
+
+        // Update auth/user info in localStorage so other modules pick it up
+        const userInfoStr = localStorage.getItem('userInfo');
+        if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          userInfo.workspace_name = data.workspace_name;
+          localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        }
+
+        // Fire event so that Settings page or other pages can sync
+        window.dispatchEvent(new Event('workspace_renamed'));
+      } else {
+        showToast?.(data.message || 'Failed to rename workspace', 'error');
+      }
+    } catch (err) {
+      showToast?.('Error renaming workspace', 'error');
+    }
+  };
+
+  React.useEffect(() => {
+    if (!auth || !auth.token || !auth.workspace_id) return;
+
+    const fetchWS = async () => {
+      try {
+        const res = await fetch('/api/workspace/info', {
+          headers: { 'Authorization': `Bearer ${auth.token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.name) {
+            setWorkspaceName(data.name);
+          }
+        }
+      } catch (err) {
+        // silent
+      }
+    };
+
+    fetchWS();
+
+    const handleRename = () => {
+      const userInfoStr = localStorage.getItem('userInfo');
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        if (userInfo.workspace_name) {
+          setWorkspaceName(userInfo.workspace_name);
+          return;
+        }
+      }
+      fetchWS();
+    };
+
+    window.addEventListener('workspace_renamed', handleRename);
+    return () => window.removeEventListener('workspace_renamed', handleRename);
+  }, [auth?.workspace_id, auth?.token]);
 
   const userRole = (role || auth?.role || '').toLowerCase();
 
@@ -80,9 +194,82 @@ const Sidebar = ({ setAuth, role, auth, handleLogout }) => {
             }}>
               <Coffee size={20} />
             </div>
-            <div>
-              <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.5px' }}>CRFTD COFFEE</h2>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>Management Console</span>
+            <div 
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              style={{ display: 'flex', flexDirection: 'column', minWidth: '150px', position: 'relative' }}
+            >
+              {isEditing ? (
+                <form onSubmit={handleSave} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0, width: '100%' }}>
+                  <input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    autoFocus
+                    style={{
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                      color: 'var(--text-main)',
+                      backgroundColor: 'var(--border-light)',
+                      border: '2px solid var(--primary)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '2px 4px',
+                      width: '120px',
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  <button type="submit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', padding: '2px', display: 'flex', alignItems: 'center' }} title="Save">
+                    <Check size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setEditValue(workspaceName); setIsEditing(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d9534f', padding: '2px', display: 'flex', alignItems: 'center' }} title="Cancel">
+                    <X size={16} />
+                  </button>
+                </form>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <h2 
+                    style={{ 
+                      fontSize: '1.1rem', 
+                      margin: 0, 
+                      fontWeight: 800, 
+                      color: 'var(--text-main)', 
+                      letterSpacing: '0.5px', 
+                      textTransform: 'uppercase',
+                      maxWidth: '150px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                    title={workspaceName}
+                  >
+                    {workspaceName}
+                  </h2>
+                  <button 
+                    onClick={() => {
+                      setEditValue(workspaceName);
+                      setIsEditing(true);
+                    }} 
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)',
+                      opacity: isHovered ? 0.7 : 0,
+                      padding: '2px',
+                      transition: 'opacity 0.2s',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Rename Workspace"
+                  >
+                    <Edit2 size={13} />
+                  </button>
+                </div>
+              )}
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', display: 'block', marginTop: '2px' }}>Management Console</span>
             </div>
           </div>
         </div>

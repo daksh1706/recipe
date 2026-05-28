@@ -109,6 +109,9 @@ const Settings = ({ userRole = 'admin', auth }) => {
   const [isEditingCode, setIsEditingCode] = useState(false);
   const [customCodeInput, setCustomCodeInput] = useState('');
   const [savingCode, setSavingCode] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [workspaceNameInput, setWorkspaceNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   const handleJoinWorkspace = async (e) => {
     e.preventDefault();
@@ -243,6 +246,50 @@ const Settings = ({ userRole = 'admin', auth }) => {
       showToast(error.message, 'error');
     } finally {
       setSavingCode(false);
+    }
+  };
+
+  const handleUpdateWorkspaceName = async (e) => {
+    e.preventDefault();
+    if (!workspaceNameInput.trim()) {
+      showToast('Workspace name cannot be empty', 'error');
+      return;
+    }
+
+    setSavingName(true);
+    try {
+      const res = await fetch('/api/workspace/rename', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(() => { try { return JSON.parse(localStorage.getItem('userInfo') || '{}').token || ''; } catch { return ''; } })()}`
+        },
+        body: JSON.stringify({ workspace_name: workspaceNameInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Workspace renamed successfully!', 'success');
+        setWorkspaceInfo(prev => ({ ...prev, name: data.workspace_name }));
+        
+        const userInfoStr = localStorage.getItem('userInfo');
+        if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          const updatedUser = { 
+            ...userInfo, 
+            workspace_name: data.workspace_name 
+          };
+          localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        }
+
+        setIsEditingName(false);
+        window.dispatchEvent(new Event('workspace_renamed'));
+      } else {
+        showToast(data.message || 'Failed to rename workspace', 'error');
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setSavingName(false);
     }
   };
 
@@ -1047,15 +1094,72 @@ const Settings = ({ userRole = 'admin', auth }) => {
                       padding: '2rem',
                       border: '1px solid var(--border)',
                       display: 'flex',
-                      flexDirection: 'column',
+                    flexDirection: 'column',
                       gap: '1.5rem',
                       position: 'relative',
                       overflow: 'hidden'
                     }}>
                       
                       <div>
-                        <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em' }}>STORE SEGMENT</span>
-                        <h4 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.25rem' }}>{workspaceInfo.name}</h4>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em' }}>STORE SEGMENT</span>
+                        {isEditingName ? (
+                          <form onSubmit={handleUpdateWorkspaceName} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                            <input 
+                              type="text"
+                              required
+                              value={workspaceNameInput}
+                              onChange={(e) => setWorkspaceNameInput(e.target.value)}
+                              style={{
+                                fontSize: '1.2rem',
+                                fontWeight: 800,
+                                color: 'var(--text-main)',
+                                padding: '0.4rem 0.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1.5px solid var(--primary)',
+                                minWidth: '220px',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                            <button 
+                              type="submit" 
+                              disabled={savingName}
+                              className="btn btn-primary"
+                              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', height: '36px' }}
+                            >
+                              {savingName ? 'Saving...' : 'Save'}
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setIsEditingName(false)}
+                              className="btn btn-secondary"
+                              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', height: '36px' }}
+                            >
+                              Cancel
+                            </button>
+                          </form>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
+                            <h4 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>{workspaceInfo.name}</h4>
+                            {workspaceInfo.isOwner && (
+                              <button 
+                                onClick={() => { setWorkspaceNameInput(workspaceInfo.name); setIsEditingName(true); }}
+                                style={{
+                                  border: 'none',
+                                  background: 'transparent',
+                                  cursor: 'pointer',
+                                  color: 'var(--primary)',
+                                  padding: '0.25rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                title="Rename Workspace"
+                              >
+                                <Edit size={16} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                        {workspaceInfo.isOwner ? (
