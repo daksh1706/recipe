@@ -57,21 +57,32 @@ export const queueOrderNotification = async (order, customer, pdfBuffer, itemsLi
       }
     }
 
-    // 3. Log notification inside Database (upsert or insert)
-    const { data: log, error: logErr } = await supabase
+    // 3. Log BOTH WhatsApp and SMS notifications inside Database
+    const { data: logs, error: logErr } = await supabase
       .from('notification_logs')
-      .insert({
-        order_id: order.id,
-        customer_id: customer?.id || null,
-        phone_number: phoneNumber,
-        channel: 'whatsapp', // Default channel
-        template_name: 'pos_receipt_confirmation',
-        status: 'pending',
-        pdf_url: invoiceUrl || null,
-        max_retries: 3
-      })
-      .select()
-      .single();
+      .insert([
+        {
+          order_id: order.id,
+          customer_id: customer?.id || null,
+          phone_number: phoneNumber,
+          channel: 'whatsapp',
+          template_name: 'pos_receipt_confirmation',
+          status: 'pending',
+          pdf_url: invoiceUrl || null,
+          max_retries: 3
+        },
+        {
+          order_id: order.id,
+          customer_id: customer?.id || null,
+          phone_number: phoneNumber,
+          channel: 'sms',
+          template_name: 'pos_receipt_confirmation',
+          status: 'pending',
+          pdf_url: invoiceUrl || null,
+          max_retries: 3
+        }
+      ])
+      .select();
 
     if (logErr) {
       // If table is missing or RLS blocks it, we gracefully fallback to console logging
@@ -84,18 +95,20 @@ export const queueOrderNotification = async (order, customer, pdfBuffer, itemsLi
     }
 
     // 4. Asynchronously process delivery if Twilio is set up
-    if (twilioClient) {
-      setImmediate(() => dispatchNotificationJob(log.id, itemsList, customer));
+    if (twilioClient && logs && logs.length > 0) {
+      logs.forEach(log => {
+        setImmediate(() => dispatchNotificationJob(log.id, itemsList, customer));
+      });
     }
 
-    return log.id;
+    return logs[0]?.id;
   } catch (error) {
     console.error('Error in queueOrderNotification service:', error.message);
   }
 };
 
 /**
- * Worker Core: Twilio Client API Call & Fallback Execution with state logging
+ * Worker Core: Twilio Client API Call
  */
 const dispatchNotificationJob = async (logId, itemsList, customer) => {
   const { data: log, error: fetchErr } = await supabase
@@ -107,7 +120,7 @@ const dispatchNotificationJob = async (logId, itemsList, customer) => {
   if (fetchErr || !log) return;
 
   try {
-    // Format recipient phone number to E.164 (e.g. +9178788489640)
+    // Format recipient phone number to E.164 (e.g. +917878489640)
     let formattedPhone = log.phone_number.replace(/[^0-9]/g, '');
     if (formattedPhone.length === 10) formattedPhone = `91${formattedPhone}`;
     if (!formattedPhone.startsWith('+')) formattedPhone = `+${formattedPhone}`;
@@ -149,19 +162,6 @@ const dispatchNotificationJob = async (logId, itemsList, customer) => {
   } catch (err) {
     console.error(`Twilio execution error for log ${logId} (channel: ${log.channel}):`, err.message);
 
-    // If WhatsApp failed because recipient number is not registered on WhatsApp, trigger SMS fallback
-    const isNoWhatsAppUser = err.code === 63024 || err.message.toLowerCase().includes('not a whatsapp') || err.message.toLowerCase().includes('is not a valid');
-    if (log.channel === 'whatsapp' && isNoWhatsAppUser) {
-      console.log(`User ${log.phone_number} not on WhatsApp. Switching channel to SMS fallback...`);
-      await supabase.from('notification_logs').update({
-        channel: 'sms',
-        retry_count: 0
-      }).eq('id', log.id);
-      
-      // Run SMS fallback attempt
-      return dispatchNotificationJob(logId, itemsList, customer);
-    }
-
     // Standard retry logic with exponential backoff
     const newRetryCount = log.retry_count + 1;
     const shouldRetry = newRetryCount < log.max_retries;
@@ -183,13 +183,14 @@ const dispatchNotificationJob = async (logId, itemsList, customer) => {
  * Fallback Direct dispatch if database logger table is missing
  */
 const dispatchDirectNotification = async (order, customer, phoneNumber, invoiceUrl, itemsList) => {
+  let formattedPhone = phoneNumber.replace(/[^0-9]/g, '');
+  if (formattedPhone.length === 10) formattedPhone = `91${formattedPhone}`;
+  if (!formattedPhone.startsWith('+')) formattedPhone = `+${formattedPhone}`;
+
+  const compiledMessage = compileReceiptMessage(order, customer, itemsList, invoiceUrl || '');
+
+  // 1. Dispatch WhatsApp
   try {
-    let formattedPhone = phoneNumber.replace(/[^0-9]/g, '');
-    if (formattedPhone.length === 10) formattedPhone = `91${formattedPhone}`;
-    if (!formattedPhone.startsWith('+')) formattedPhone = `+${formattedPhone}`;
-
-    const compiledMessage = compileReceiptMessage(order, customer, itemsList, invoiceUrl || '');
-
     const payload = {
       from: TWILIO_WHATSAPP_NUMBER,
       to: `whatsapp:${formattedPhone}`,
@@ -198,25 +199,21 @@ const dispatchDirectNotification = async (order, customer, phoneNumber, invoiceU
     if (invoiceUrl) {
       payload.mediaUrl = [invoiceUrl];
     }
-
     await twilioClient.messages.create(payload);
     console.log(`Direct WhatsApp notification sent successfully for order ${order.order_code}`);
   } catch (err) {
-    console.error(`Direct WhatsApp notification failed, trying SMS: ${err.message}`);
-    try {
-      let formattedPhone = phoneNumber.replace(/[^0-9]/g, '');
-      if (formattedPhone.length === 10) formattedPhone = `91${formattedPhone}`;
-      if (!formattedPhone.startsWith('+')) formattedPhone = `+${formattedPhone}`;
+    console.error(`Direct WhatsApp notification failed: ${err.message}`);
+  }
 
-      const compiledMessage = compileReceiptMessage(order, customer, itemsList, invoiceUrl || '');
-      await twilioClient.messages.create({
-        from: TWILIO_SMS_NUMBER,
-        to: formattedPhone,
-        body: compiledMessage
-      });
-      console.log(`Direct fallback SMS sent successfully for order ${order.order_code}`);
-    } catch (smsErr) {
-      console.error(`Direct fallback SMS failed: ${smsErr.message}`);
-    }
+  // 2. Dispatch SMS
+  try {
+    await twilioClient.messages.create({
+      from: TWILIO_SMS_NUMBER,
+      to: formattedPhone,
+      body: compiledMessage
+    });
+    console.log(`Direct SMS sent successfully for order ${order.order_code}`);
+  } catch (smsErr) {
+    console.error(`Direct SMS failed: ${smsErr.message}`);
   }
 };
