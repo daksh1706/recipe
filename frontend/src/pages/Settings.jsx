@@ -363,7 +363,9 @@ const Settings = ({ userRole = 'admin', auth }) => {
       frappuccino: 5,
       cold_brew: 5,
       soda: 12,
-      light_bites: 12
+      light_bites: 12,
+      pasta: 12,
+      sandwich: 12
     };
   });
 
@@ -1857,6 +1859,24 @@ const Settings = ({ userRole = 'admin', auth }) => {
                       type="number" 
                       value={gstConfig.light_bites || 0} 
                       onChange={(e) => setGstConfig({...gstConfig, light_bites: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Pasta (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.pasta || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, pasta: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Sandwiches (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.sandwich || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, sandwich: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>

@@ -341,8 +341,16 @@ export const createOrder = async (req, res) => {
       req.io.emit('order_created', responseOrder);
     }
 
-    // Trigger Twilio messaging notification asynchronously (non-blocking)
-    queueOrderNotification(populated, populated.customer, null, responseOrder.items);
+    // Generate PDF receipt on the backend and trigger messaging asynchronously
+    try {
+      const { generateReceiptPDFBuffer } = await import('../utils/pdfGenerator.js');
+      const pdfBuffer = generateReceiptPDFBuffer(populated, populated.customer, responseOrder.items);
+      queueOrderNotification(populated, populated.customer, pdfBuffer, responseOrder.items);
+    } catch (pdfErr) {
+      console.error("Error generating PDF receipt on backend checkout:", pdfErr.message);
+      // Fail-safe fallback to sending notification without PDF attachment
+      queueOrderNotification(populated, populated.customer, null, responseOrder.items);
+    }
 
     res.status(201).json(responseOrder);
   } catch (error) {

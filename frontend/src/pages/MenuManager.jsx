@@ -164,7 +164,8 @@ const MenuManager = () => {
     { value: 'cold_brew', label: 'Cold Brews' },
     { value: 'soda', label: 'Sodas & Cold Drinks' },
     { value: 'light_bites', label: 'Light Bites' },
-    { value: 'pasta', label: 'Pasta' }
+    { value: 'pasta', label: 'Pasta' },
+    { value: 'sandwich', label: 'Sandwich' }
   ];
 
   // Auto-generate code on Category Change
@@ -675,6 +676,7 @@ const MenuManager = () => {
                     <option value="soda">Sodas & Cold Drinks</option>
                     <option value="light_bites">Light Bites</option>
                     <option value="pasta">Pasta</option>
+                    <option value="sandwich">Sandwich</option>
                   </select>
                 </div>
               </div>
@@ -771,7 +773,7 @@ const MenuManager = () => {
                 <label htmlFor="modalIsAvailable" style={{ fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer' }}>Item is Available (Instantly active in POS)</label>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '2.8rem', marginTop: '0.5rem', justifyContent: 'center' }}>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '3.4rem', fontSize: '1.05rem', fontWeight: '700', marginTop: '0.5rem', justifyContent: 'center' }}>
                 {editItem ? 'Save Specifications' : 'Onboard Menu Product'}
               </button>
 

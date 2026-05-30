@@ -171,29 +171,135 @@ const Customers = () => {
       return;
     }
 
-    const headers = ['Name', 'Phone', 'Email', 'Visits Count', 'Total Spent (INR)', 'First Visit', 'Last Visit', 'Notes'];
+    const headers = ['Name', 'Phone', 'Email', 'Notes'];
     const rows = customers.map(c => [
-      c.name,
-      c.phone,
+      c.name || '',
+      c.phone || '',
       c.email || '',
-      c.totalVisits,
-      c.totalSpent,
-      c.firstVisitDate || '',
-      c.lastVisitDate || '',
       c.notes || ''
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(r => r.map(val => `"${val}"`).join(','))].join('\n');
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Customer_Loyalty_List_${new Date().toISOString().split('T')[0]}.csv`);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `customers_export.csv`);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Customer directory spreadsheet downloaded!', 'success');
+    showToast('Customers exported successfully!', 'success');
+  };
+
+  const parseCSV = (text) => {
+    const lines = [];
+    let row = [""];
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          row[row.length - 1] += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push('');
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++;
+        }
+        lines.push(row);
+        row = [''];
+      } else {
+        row[row.length - 1] += char;
+      }
+    }
+    if (row.length > 1 || row[0] !== '') {
+      lines.push(row);
+    }
+    return lines;
+  };
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target.result;
+      const rows = parseCSV(text);
+      if (rows.length <= 1) {
+        showToast('CSV is empty or invalid', 'error');
+        return;
+      }
+
+      const dataRows = rows.slice(1).filter(r => r.length > 0 && r[0].trim() !== '');
+      let successCount = 0;
+      let failCount = 0;
+      let invalidPhoneCount = 0;
+
+      showToast(`Starting bulk import of ${dataRows.length} guest(s)...`, 'info');
+
+      for (const row of dataRows) {
+        const [nameVal, phoneVal, emailVal, notesVal] = row;
+
+        if (!nameVal || nameVal.trim() === '') {
+          failCount++;
+          continue;
+        }
+
+        const phoneClean = phoneVal ? phoneVal.replace(/[^0-9]/g, '') : '';
+        if (phoneClean.length !== 10) {
+          invalidPhoneCount++;
+          failCount++;
+          continue;
+        }
+
+        const payload = {
+          name: nameVal.trim(),
+          phone: phoneClean,
+          email: emailVal ? emailVal.trim() : '',
+          notes: notesVal ? notesVal.trim() : ''
+        };
+
+        try {
+          const res = await fetch('/api/customers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${auth.token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+
+      let completionMsg = `Import completed: ${successCount} succeeded, ${failCount} failed.`;
+      if (invalidPhoneCount > 0) {
+        completionMsg += ` (${invalidPhoneCount} failed due to invalid 10-digit phone number)`;
+      }
+      showToast(completionMsg, successCount > 0 ? 'success' : 'error');
+      fetchCustomers();
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
@@ -209,10 +315,28 @@ const Customers = () => {
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Manage customer profiles, loyalty spent totals, and favorite products.</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={handleExportCSV} className="btn btn-secondary" style={{ height: '2.5rem', padding: '0 1rem' }}>
-              <Download size={16} /> Export CSV
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              onClick={handleExportCSV} 
+              className="btn btn-secondary" 
+              style={{ height: '2.5rem', padding: '0 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              title="Export Guests to CSV/Excel"
+            >
+              Export CSV
             </button>
+            <label 
+              className="btn btn-secondary" 
+              style={{ height: '2.5rem', padding: '0 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', margin: 0, justifyContent: 'center' }}
+              title="Import Guests from CSV"
+            >
+              Import CSV
+              <input 
+                type="file" 
+                accept=".csv" 
+                onChange={handleImportCSV} 
+                style={{ display: 'none' }} 
+              />
+            </label>
             <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
               <Plus size={16} /> Add Customer
             </button>

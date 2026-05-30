@@ -176,6 +176,154 @@ const Suppliers = () => {
     });
   };
 
+  const parseCSV = (text) => {
+    const lines = [];
+    let row = [""];
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          row[row.length - 1] += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push('');
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++;
+        }
+        lines.push(row);
+        row = [''];
+      } else {
+        row[row.length - 1] += char;
+      }
+    }
+    if (row.length > 1 || row[0] !== '') {
+      lines.push(row);
+    }
+    return lines;
+  };
+
+  const handleExportCSV = () => {
+    if (suppliers.length === 0) {
+      showToast('No suppliers available to export', 'warning');
+      return;
+    }
+
+    const headers = ['Name', 'Contact Person', 'Phone', 'Email', 'Payment Terms', 'Items Supplied', 'Delivery Days', 'Min Order Qty', 'Address', 'Notes'];
+    const rows = suppliers.map(s => [
+      s.name || '',
+      s.contactPerson || '',
+      s.phone || '',
+      s.email || '',
+      s.paymentTerms || '',
+      s.itemsSupplied || '',
+      s.deliveryDays || '',
+      s.minimumOrderQuantity || 0,
+      s.address || '',
+      s.notes || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'suppliers_export.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Suppliers exported successfully!', 'success');
+  };
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target.result;
+      const rows = parseCSV(text);
+      if (rows.length <= 1) {
+        showToast('CSV is empty or invalid', 'error');
+        return;
+      }
+
+      const dataRows = rows.slice(1).filter(r => r.length > 0 && r[0].trim() !== '');
+      let successCount = 0;
+      let failCount = 0;
+
+      showToast(`Starting bulk import of ${dataRows.length} supplier(s)...`, 'info');
+
+      for (const row of dataRows) {
+        const [
+          nameVal,
+          contactVal,
+          phoneVal,
+          emailVal,
+          paymentTermsVal,
+          itemsSuppliedVal,
+          deliveryDaysVal,
+          minOrderVal,
+          addressVal,
+          notesVal
+        ] = row;
+
+        if (!nameVal || nameVal.trim() === '') {
+          failCount++;
+          continue;
+        }
+
+        const payload = {
+          name: nameVal.trim(),
+          contactPerson: contactVal ? contactVal.trim() : '',
+          phone: phoneVal ? phoneVal.trim() : '',
+          email: emailVal ? emailVal.trim() : '',
+          paymentTerms: paymentTermsVal ? paymentTermsVal.trim() : 'COD',
+          itemsSupplied: itemsSuppliedVal ? itemsSuppliedVal.trim() : '',
+          deliveryDays: deliveryDaysVal ? deliveryDaysVal.trim() : '',
+          minimumOrderQuantity: minOrderVal ? Number(minOrderVal.trim()) || 0 : 0,
+          address: addressVal ? addressVal.trim() : '',
+          notes: notesVal ? notesVal.trim() : ''
+        };
+
+        try {
+          const res = await fetch('/api/suppliers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${auth.token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+
+      showToast(`Import completed: ${successCount} succeeded, ${failCount} failed.`, successCount > 0 ? 'success' : 'error');
+      fetchSuppliers();
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -201,9 +349,32 @@ const Suppliers = () => {
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Manage wholesale vendors, purchase terms, and raw supply rosters.</span>
           </div>
 
-          <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
-            <Plus size={16} /> Add Supplier
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              onClick={handleExportCSV} 
+              className="btn btn-secondary" 
+              style={{ height: '2.5rem', padding: '0 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              title="Export Suppliers to CSV/Excel"
+            >
+              Export CSV
+            </button>
+            <label 
+              className="btn btn-secondary" 
+              style={{ height: '2.5rem', padding: '0 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', margin: 0, justifyContent: 'center' }}
+              title="Import Suppliers from CSV"
+            >
+              Import CSV
+              <input 
+                type="file" 
+                accept=".csv" 
+                onChange={handleImportCSV} 
+                style={{ display: 'none' }} 
+              />
+            </label>
+            <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
+              <Plus size={16} /> Add Supplier
+            </button>
+          </div>
         </div>
 
         {/* Suppliers cards list */}

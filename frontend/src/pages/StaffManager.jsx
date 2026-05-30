@@ -16,6 +16,7 @@ const StaffManager = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [performance, setPerformance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isManagerOrAdmin = ['admin', 'manager'].includes((auth.role || '').toLowerCase());
 
   // Form Modal State
   const [showModal, setShowModal] = useState(false);
@@ -47,25 +48,30 @@ const StaffManager = () => {
       const rostRes = await fetch('/api/staff/roster', {
         headers: { 'Authorization': `Bearer ${auth.token}` }
       });
-      const rostData = await rostRes.json();
-      if (rostRes.ok) setRoster(rostData);
-
-      // 2. Fetch all approved users for manual roster onboarding dropdown
-      const userRes = await fetch('/api/users', {
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
-      const userData = await userRes.json();
-      if (resOk(userRes)) {
-        setAllUsers(userData.filter(u => u.status === 'approved'));
+      if (rostRes.ok) {
+        const rostData = await rostRes.json();
+        setRoster(rostData);
       }
 
-      // 3. Fetch Staff Performance
-      const perfRes = await fetch('/api/staff/performance', {
-        headers: { 'Authorization': `Bearer ${auth.token}` }
-      });
-      const perfData = await perfRes.json();
-      if (perfRes.ok) setPerformance(perfData);
+      if (isManagerOrAdmin) {
+        // 2. Fetch all approved users for manual roster onboarding dropdown
+        const userRes = await fetch('/api/users', {
+          headers: { 'Authorization': `Bearer ${auth.token}` }
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setAllUsers(userData.filter(u => u.status === 'approved'));
+        }
 
+        // 3. Fetch Staff Performance
+        const perfRes = await fetch('/api/staff/performance', {
+          headers: { 'Authorization': `Bearer ${auth.token}` }
+        });
+        if (perfRes.ok) {
+          const perfData = await perfRes.json();
+          setPerformance(perfData);
+        }
+      }
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
@@ -218,9 +224,11 @@ const StaffManager = () => {
           <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Manage shift schedules, monthly salaries, and staff sales performance.</span>
         </div>
 
-        <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
-          <Plus size={16} /> Onboard Staff
-        </button>
+        {isManagerOrAdmin && (
+          <button onClick={() => handleOpenModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
+            <Plus size={16} /> Onboard Staff
+          </button>
+        )}
       </div>
 
       {/* Tabs Selector Navigation (Roster cards / weekly shifts calendar / performance) */}
@@ -228,8 +236,8 @@ const StaffManager = () => {
         {[
           { id: 'roster', label: 'Staff Roster Cards', icon: <Users size={16} /> },
           { id: 'calendar', label: 'Weekly Shift Schedule', icon: <Calendar size={16} /> },
-          { id: 'performance', label: 'Sales Performance Metrics', icon: <Award size={16} /> }
-        ].map(tab => (
+          isManagerOrAdmin && { id: 'performance', label: 'Sales Performance Metrics', icon: <Award size={16} /> }
+        ].filter(Boolean).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -269,10 +277,12 @@ const StaffManager = () => {
                   <div style={{ display: 'flex', justify: 'space-between', width: '100%', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{u.fullName || 'Staff Member'}</h3>
                     
-                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      <button onClick={() => handleOpenModal(r)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', padding: '0.25rem' }} title="Edit"><Edit size={14} /></button>
-                      <button onClick={() => handleDeleteRoster(r._id)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d9534f', padding: '0.25rem' }} title="Delete"><Trash2 size={14} /></button>
-                    </div>
+                    {isManagerOrAdmin && (
+                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <button onClick={() => handleOpenModal(r)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', padding: '0.25rem' }} title="Edit"><Edit size={14} /></button>
+                        <button onClick={() => handleDeleteRoster(r._id)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#d9534f', padding: '0.25rem' }} title="Delete"><Trash2 size={14} /></button>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>

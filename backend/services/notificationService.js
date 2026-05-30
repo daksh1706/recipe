@@ -33,6 +33,22 @@ export const queueOrderNotification = async (order, customer, pdfBuffer, itemsLi
 
     // 1. Upload invoice PDF to Supabase Storage if a PDF buffer is supplied
     if (pdfBuffer) {
+      try {
+        const { data: buckets, error: bucketsErr } = await supabase.storage.listBuckets();
+        if (!bucketsErr && buckets) {
+          const exists = buckets.some(b => b.name === 'invoices');
+          if (!exists) {
+            await supabase.storage.createBucket('invoices', {
+              public: true,
+              allowedMimeTypes: ['application/pdf']
+            });
+            console.log("Bucket 'invoices' created successfully.");
+          }
+        }
+      } catch (bucketErr) {
+        console.error('Error ensuring invoices bucket exists:', bucketErr.message);
+      }
+
       const pdfPath = `receipts/${order.order_code}.pdf`;
       const { data: uploadData, error: uploadErr } = await supabase.storage
         .from('invoices')

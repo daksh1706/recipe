@@ -366,6 +366,158 @@ const InventoryDashboard = ({ userRole }) => {
     return matchesSearch && matchesCat && matchesStatus;
   });
 
+  const parseCSV = (text) => {
+    const lines = [];
+    let row = [""];
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          row[row.length - 1] += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push('');
+      } else if ((char === '\r' || char === '\n') && !inQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++;
+        }
+        lines.push(row);
+        row = [''];
+      } else {
+        row[row.length - 1] += char;
+      }
+    }
+    if (row.length > 1 || row[0] !== '') {
+      lines.push(row);
+    }
+    return lines;
+  };
+
+  const handleExportCSV = () => {
+    if (rawMaterials.length === 0) {
+      showToast('No inventory items available to export', 'warning');
+      return;
+    }
+
+    const headers = ['Item Code', 'Name', 'Category', 'Unit', 'Current Stock', 'Minimum Stock Level', 'Reorder Quantity', 'Cost Per Unit', 'Storage Location', 'Expiry Date'];
+    const rows = rawMaterials.map(m => [
+      m.itemCode || '',
+      m.name || '',
+      m.category || '',
+      m.unit || '',
+      m.currentStock || 0,
+      m.minimumStockLevel || 0,
+      m.reorderQuantity || 0,
+      m.costPerUnit || 0,
+      m.storageLocation || '',
+      m.expiryDate ? m.expiryDate.split('T')[0] : ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'inventory_export.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Inventory exported successfully!', 'success');
+  };
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const text = evt.target.result;
+      const rows = parseCSV(text);
+      if (rows.length <= 1) {
+        showToast('CSV is empty or invalid', 'error');
+        return;
+      }
+
+      const dataRows = rows.slice(1).filter(r => r.length > 0 && r[1]?.trim() !== '');
+      let successCount = 0;
+      let failCount = 0;
+
+      showToast(`Starting bulk import of ${dataRows.length} inventory material(s)...`, 'info');
+
+      for (const row of dataRows) {
+        const [
+          codeVal,
+          nameVal,
+          catVal,
+          unitVal,
+          stockVal,
+          minStockVal,
+          reorderVal,
+          costVal,
+          locationVal,
+          expiryVal
+        ] = row;
+
+        if (!nameVal || nameVal.trim() === '') {
+          failCount++;
+          continue;
+        }
+
+        const categoryVal = catVal ? catVal.trim() : 'coffee_beans';
+        const finalItemCode = codeVal ? codeVal.trim() : generateNextCode(categoryVal, rawMaterials);
+
+        const payload = {
+          itemCode: finalItemCode,
+          name: nameVal.trim(),
+          category: categoryVal,
+          unit: unitVal ? unitVal.trim() : 'g',
+          currentStock: stockVal ? Number(stockVal.trim()) || 0 : 0,
+          minimumStockLevel: minStockVal ? Number(minStockVal.trim()) || 0 : 0,
+          costPerUnit: costVal ? Number(costVal.trim()) || 0 : 0,
+          reorderQuantity: reorderVal ? Number(reorderVal.trim()) || 50 : 50,
+          storageLocation: locationVal ? locationVal.trim() : '',
+          expiryDate: expiryVal && expiryVal.trim() !== '' ? expiryVal.trim() : null,
+          supplierId: null
+        };
+
+        try {
+          const res = await fetch('/api/inventory', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${auth.token}`
+            },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+
+      showToast(`Import completed: ${successCount} succeeded, ${failCount} failed.`, successCount > 0 ? 'success' : 'error');
+      fetchData();
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const isBarista = userRole === 'barista';
 
   if (loading) {
@@ -391,9 +543,32 @@ const InventoryDashboard = ({ userRole }) => {
         </div>
 
         {!isBarista && (
-          <button onClick={() => handleOpenFormModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
-            <Plus size={16} /> Add Material
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              onClick={handleExportCSV} 
+              className="btn btn-secondary" 
+              style={{ height: '2.5rem', padding: '0 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              title="Export Inventory to CSV/Excel"
+            >
+              Export CSV
+            </button>
+            <label 
+              className="btn btn-secondary" 
+              style={{ height: '2.5rem', padding: '0 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer', margin: 0, justifyContent: 'center' }}
+              title="Import Inventory from CSV"
+            >
+              Import CSV
+              <input 
+                type="file" 
+                accept=".csv" 
+                onChange={handleImportCSV} 
+                style={{ display: 'none' }} 
+              />
+            </label>
+            <button onClick={() => handleOpenFormModal()} className="btn btn-primary" style={{ height: '2.5rem', padding: '0 1.25rem' }}>
+              <Plus size={16} /> Add Material
+            </button>
+          </div>
         )}
       </div>
 

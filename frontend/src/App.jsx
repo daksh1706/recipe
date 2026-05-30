@@ -286,7 +286,7 @@ function AppInner() {
 
                 {/* Roster & Staff Calendar (Module 12): admin, manager */}
                 <Route path="/staff" element={
-                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<StaffManager />} />
+                  <GuardRoute allowed={['admin', 'manager', 'barista', 'cashier']} userRole={userRole} element={<StaffManager />} />
                 } />
 
                 {/* Waste Spoilage logs (Module 13): admin, manager, barista */}

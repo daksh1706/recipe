@@ -4,7 +4,7 @@ import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/', protect, adminOnly, getAllUsers);
+router.get('/', protect, managerOrAdmin, getAllUsers);
 router.get('/pending', protect, adminOnly, getPendingUsers);
 router.post('/admin-create', protect, adminOnly, adminCreateUser);
 router.put('/:id', protect, adminOnly, updateUser);
