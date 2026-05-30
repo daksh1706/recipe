@@ -67,31 +67,65 @@ export const getMenuItems = async (req, res) => {
 
 
 export const addMenuItem = async (req, res) => {
-  const { itemCode, item_code, name, description, category, price, gstPercent, gst_percent, isAvailable, is_available, imageUrl, image_url, recipe } = req.body;
+  const { 
+    itemCode, item_code, name, description, category, price, gstPercent, gst_percent, isAvailable, is_available, imageUrl, image_url, recipe,
+    calories, carbs, protein, fat 
+  } = req.body;
   
   const finalCode = itemCode || item_code || `MENU-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
   const finalGst = gstPercent !== undefined ? gstPercent : (gst_percent !== undefined ? gst_percent : 5.0);
   const finalAvailable = isAvailable !== undefined ? isAvailable : (is_available !== undefined ? is_available : true);
   const finalImage = imageUrl || image_url || '';
 
+  const insertPayload = {
+    item_code: finalCode,
+    name,
+    description: description || '',
+    category,
+    price: Number(price),
+    gst_percent: Number(finalGst),
+    is_available: finalAvailable,
+    image_url: finalImage,
+    workspace_id: req.workspace_id
+  };
+
+  if (calories !== undefined && calories !== null && calories !== '') insertPayload.calories = Number(calories);
+  if (carbs !== undefined && carbs !== null && carbs !== '') insertPayload.carbs = Number(carbs);
+  if (protein !== undefined && protein !== null && protein !== '') insertPayload.protein = Number(protein);
+  if (fat !== undefined && fat !== null && fat !== '') insertPayload.fat = Number(fat);
+
   try {
-    const { data: item, error } = await supabase
+    let item;
+    const { data, error } = await supabase
       .from('menu_items')
-      .insert({
-        item_code: finalCode,
-        name,
-        description: description || '',
-        category,
-        price: Number(price),
-        gst_percent: Number(finalGst),
-        is_available: finalAvailable,
-        image_url: finalImage,
-        workspace_id: req.workspace_id
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      const isMissingColumn = error.message.includes('column "calories" of relation "menu_items" does not exist') || error.code === 'PGRST204';
+      if (isMissingColumn) {
+        console.warn("Nutrients columns missing in Supabase DB. Retrying insert without them.");
+        const cleanPayload = { ...insertPayload };
+        delete cleanPayload.calories;
+        delete cleanPayload.carbs;
+        delete cleanPayload.protein;
+        delete cleanPayload.fat;
+        
+        const { data: itemClean, error: cleanErr } = await supabase
+          .from('menu_items')
+          .insert(cleanPayload)
+          .select()
+          .single();
+          
+        if (cleanErr) throw cleanErr;
+        item = itemClean;
+      } else {
+        throw error;
+      }
+    } else {
+      item = data;
+    }
 
     // If recipe is provided, save it
     let insertedRecipe = null;
@@ -149,7 +183,10 @@ export const addMenuItem = async (req, res) => {
 
 export const updateMenuItem = async (req, res) => {
   const { id } = req.params;
-  const { itemCode, item_code, name, description, category, price, gstPercent, gst_percent, isAvailable, is_available, imageUrl, image_url, recipe } = req.body;
+  const { 
+    itemCode, item_code, name, description, category, price, gstPercent, gst_percent, isAvailable, is_available, imageUrl, image_url, recipe,
+    calories, carbs, protein, fat 
+  } = req.body;
   
   const updates = {};
   if (itemCode !== undefined) updates.item_code = itemCode;
@@ -169,10 +206,16 @@ export const updateMenuItem = async (req, res) => {
   if (imageUrl !== undefined) updates.image_url = imageUrl;
   else if (image_url !== undefined) updates.image_url = image_url;
 
+  if (calories !== undefined) updates.calories = calories !== null && calories !== '' ? Number(calories) : null;
+  if (carbs !== undefined) updates.carbs = carbs !== null && carbs !== '' ? Number(carbs) : null;
+  if (protein !== undefined) updates.protein = protein !== null && protein !== '' ? Number(protein) : null;
+  if (fat !== undefined) updates.fat = fat !== null && fat !== '' ? Number(fat) : null;
+
   updates.updated_at = new Date().toISOString();
 
   try {
-    const { data: item, error } = await supabase
+    let item;
+    const { data, error } = await supabase
       .from('menu_items')
       .update(updates)
       .eq('id', id)
@@ -180,7 +223,32 @@ export const updateMenuItem = async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      const isMissingColumn = error.message.includes('column "calories" of relation "menu_items" does not exist') || error.code === 'PGRST204';
+      if (isMissingColumn) {
+        console.warn("Nutrients columns missing in Supabase DB. Retrying update without them.");
+        const cleanUpdates = { ...updates };
+        delete cleanUpdates.calories;
+        delete cleanUpdates.carbs;
+        delete cleanUpdates.protein;
+        delete cleanUpdates.fat;
+        
+        const { data: itemClean, error: cleanErr } = await supabase
+          .from('menu_items')
+          .update(cleanUpdates)
+          .eq('id', id)
+          .eq('workspace_id', req.workspace_id)
+          .select()
+          .single();
+          
+        if (cleanErr) throw cleanErr;
+        item = itemClean;
+      } else {
+        throw error;
+      }
+    } else {
+      item = data;
+    }
 
     // Update recipe if provided
     if (recipe) {

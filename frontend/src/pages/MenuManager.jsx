@@ -146,6 +146,10 @@ const MenuManager = () => {
   const [gstPercent, setGstPercent] = useState(5.0);
   const [isAvailable, setIsAvailable] = useState(true);
   const [imageUrl, setImageUrl] = useState('');
+  const [calories, setCalories] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [protein, setProtein] = useState('');
+  const [fat, setFat] = useState('');
 
   const categories = [
     { value: 'all', label: 'All Items' },
@@ -239,6 +243,12 @@ const MenuManager = () => {
       setGstPercent(item.gstPercent || 5.0);
       setIsAvailable(item.isAvailable);
       setImageUrl(item.imageUrl || '');
+      
+      const defaultNut = getNutrition(item.name);
+      setCalories(item.calories !== undefined && item.calories !== null ? item.calories : defaultNut.calories);
+      setCarbs(item.carbs !== undefined && item.carbs !== null ? item.carbs : defaultNut.carbs);
+      setProtein(item.protein !== undefined && item.protein !== null ? item.protein : defaultNut.protein);
+      setFat(item.fat !== undefined && item.fat !== null ? item.fat : defaultNut.fat);
     } else {
       setEditItem(null);
       setName('');
@@ -250,6 +260,10 @@ const MenuManager = () => {
       setGstPercent(5.0);
       setIsAvailable(true);
       setImageUrl('');
+      setCalories('');
+      setCarbs('');
+      setProtein('');
+      setFat('');
     }
     setShowModal(true);
   };
@@ -266,7 +280,11 @@ const MenuManager = () => {
       price: Number(price),
       gstPercent: Number(gstPercent),
       isAvailable,
-      imageUrl
+      imageUrl,
+      calories: calories !== '' ? Number(calories) : null,
+      carbs: carbs !== '' ? Number(carbs) : null,
+      protein: protein !== '' ? Number(protein) : null,
+      fat: fat !== '' ? Number(fat) : null
     };
 
     const url = editItem ? `/api/menu/${editItem._id}` : '/api/menu';
@@ -717,6 +735,31 @@ const MenuManager = () => {
                 )}
               </div>
 
+              {/* Nutrition Estimates (Optional) */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                  Nutrition Estimates (Per Serving)
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Calories (kcal)</label>
+                    <input type="number" min="0" placeholder="e.g. 120" value={calories} onChange={(e) => setCalories(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.85rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Carbs (g)</label>
+                    <input type="number" step="0.1" min="0" placeholder="e.g. 15" value={carbs} onChange={(e) => setCarbs(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.85rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Protein (g)</label>
+                    <input type="number" step="0.1" min="0" placeholder="e.g. 2" value={protein} onChange={(e) => setProtein(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.85rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Fat (g)</label>
+                    <input type="number" step="0.1" min="0" placeholder="e.g. 3" value={fat} onChange={(e) => setFat(e.target.value)} style={{ padding: '0.4rem', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                 <input 
                   type="checkbox" 
@@ -729,7 +772,7 @@ const MenuManager = () => {
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '2.8rem', marginTop: '0.5rem', justifyContent: 'center' }}>
-                Onboard Menu Product
+                {editItem ? 'Save Specifications' : 'Onboard Menu Product'}
               </button>
 
             </form>
@@ -906,23 +949,27 @@ const MenuManager = () => {
               </h3>
               {(() => {
                 const nut = getNutrition(selectedDish.name);
+                const itemCalories = selectedDish.calories !== undefined && selectedDish.calories !== null ? selectedDish.calories : nut.calories;
+                const itemCarbs = selectedDish.carbs !== undefined && selectedDish.carbs !== null ? selectedDish.carbs : nut.carbs;
+                const itemProtein = selectedDish.protein !== undefined && selectedDish.protein !== null ? selectedDish.protein : nut.protein;
+                const itemFat = selectedDish.fat !== undefined && selectedDish.fat !== null ? selectedDish.fat : nut.fat;
                 return (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CALORIES</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>{nut.calories} kcal</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>{itemCalories} kcal</span>
                     </div>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CARBS</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.carbs}g</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{itemCarbs}g</span>
                     </div>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>PROTEIN</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.protein}g</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{itemProtein}g</span>
                     </div>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>FAT</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.fat}g</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{itemFat}g</span>
                     </div>
                   </div>
                 );

@@ -1716,23 +1716,27 @@ const POS = ({ auth }) => {
               </h3>
               {(() => {
                 const nut = getNutrition(selectedDish.name);
+                const itemCalories = selectedDish.calories !== undefined && selectedDish.calories !== null ? selectedDish.calories : nut.calories;
+                const itemCarbs = selectedDish.carbs !== undefined && selectedDish.carbs !== null ? selectedDish.carbs : nut.carbs;
+                const itemProtein = selectedDish.protein !== undefined && selectedDish.protein !== null ? selectedDish.protein : nut.protein;
+                const itemFat = selectedDish.fat !== undefined && selectedDish.fat !== null ? selectedDish.fat : nut.fat;
                 return (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CALORIES</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>{nut.calories} kcal</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--primary)' }}>{itemCalories} kcal</span>
                     </div>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>CARBS</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.carbs}g</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{itemCarbs}g</span>
                     </div>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>PROTEIN</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.protein}g</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{itemProtein}g</span>
                     </div>
                     <div style={{ background: 'var(--bg-panel-light)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0.75rem', textAlign: 'center' }}>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', display: 'block' }}>FAT</span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{nut.fat}g</span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>{itemFat}g</span>
                     </div>
                   </div>
                 );
