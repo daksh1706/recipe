@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrders, updateOrderStatus, confirmPayment } from '../controllers/orderController.js';
+import { createOrder, getOrders, updateOrderStatus, confirmPayment, handleTwilioStatusCallback } from '../controllers/orderController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -10,6 +10,9 @@ router.route('/')
 
 router.route('/:id/status')
   .put(protect, updateOrderStatus);
+
+// Twilio Delivery Webhook (Public, no auth protect middleware)
+router.post('/twilio-status', handleTwilioStatusCallback);
 
 // Stripe compatibility stubs to prevent crashes if frontend requests them
 router.post('/create-payment-intent', protect, (req, res) => res.json({ clientSecret: 'pi_mock_secret' }));

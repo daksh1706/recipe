@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js';
+import { queueOrderNotification } from '../services/notificationService.js';
 
 // Helper to generate daily resetting order codes, e.g. ORD-20260530-0001
 const generateOrderCode = async (workspaceId) => {
@@ -340,6 +341,9 @@ export const createOrder = async (req, res) => {
       req.io.emit('order_created', responseOrder);
     }
 
+    // Trigger Twilio messaging notification asynchronously (non-blocking)
+    queueOrderNotification(populated, populated.customer, null, responseOrder.items);
+
     res.status(201).json(responseOrder);
   } catch (error) {
     console.error("POS Checkout error:", error);
@@ -577,6 +581,33 @@ export const confirmPayment = async (req, res) => {
   } catch (err) {
     console.error("Error in confirmPayment controller:", err);
     res.status(500).json({ message: err.message });
+  }
+};
+
+/**
+ * Handle real-time Twilio Message Delivery Status updates
+ */
+export const handleTwilioStatusCallback = async (req, res) => {
+  try {
+    const { MessageSid, MessageStatus, ErrorCode } = req.body;
+
+    let mappedStatus = 'sent';
+    if (MessageStatus === 'delivered') mappedStatus = 'delivered';
+    if (MessageStatus === 'read') mappedStatus = 'read';
+    if (MessageStatus === 'failed' || MessageStatus === 'undelivered') mappedStatus = 'failed';
+
+    const updateFields = { status: mappedStatus, updated_at: new Date().toISOString() };
+    if (ErrorCode) updateFields.error_message = `Twilio Error Code: ${ErrorCode}`;
+
+    await supabase
+      .from('notification_logs')
+      .update(updateFields)
+      .eq('provider_message_id', MessageSid);
+
+    res.status(200).send('<Response></Response>'); // Acknowledge Twilio hook with empty TwiML
+  } catch (error) {
+    console.error('Error handling Twilio status callback:', error.message);
+    res.status(500).send('Webhook failed');
   }
 };
 
