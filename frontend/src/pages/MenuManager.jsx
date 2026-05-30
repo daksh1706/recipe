@@ -1022,6 +1022,17 @@ const MenuManager = () => {
               >
                 Close Details
               </button>
+              <button 
+                onClick={() => {
+                  const dishToEdit = selectedDish;
+                  setSelectedDish(null);
+                  handleOpenModal(dishToEdit);
+                }}
+                className="btn btn-primary" 
+                style={{ flex: 1, height: '2.6rem', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <Edit size={16} /> Edit Product
+              </button>
             </div>
 
           </div>
