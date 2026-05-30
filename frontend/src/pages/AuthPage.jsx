@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ToastContext } from '../App';
-import { Mail, Lock, User, Phone, Coffee, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Phone, Coffee, Eye, EyeOff, Plus, Users } from 'lucide-react';
 
 const AuthPage = ({ setAuth }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,6 +11,8 @@ const AuthPage = ({ setAuth }) => {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('cashier'); // default role
+  const [workspaceMode, setWorkspaceMode] = useState('create'); // 'create' | 'join'
+  const [shareCode, setShareCode] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { showToast } = useContext(ToastContext);
@@ -29,9 +31,16 @@ const AuthPage = ({ setAuth }) => {
     setLoading(true);
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    const payload = isLogin 
-      ? { email, password }
-      : { email, password, full_name: fullName, phone, role };
+    let payload;
+    if (isLogin) {
+      payload = { email, password };
+    } else {
+      payload = { email, password, full_name: fullName, phone, role };
+      // If registering as admin and choosing to join an existing workspace, include share_code
+      if (role === 'admin' && workspaceMode === 'join' && shareCode.trim()) {
+        payload.share_code = shareCode.trim();
+      }
+    }
 
     try {
       const res = await fetch(endpoint, {
@@ -60,7 +69,10 @@ const AuthPage = ({ setAuth }) => {
         localStorage.setItem('userInfo', JSON.stringify(data));
         setAuth(data);
         if (data.role === 'admin') {
-          showToast(`Welcome! Workspace auto-created and logged in as Administrator: ${data.full_name || 'User'}`, 'success');
+          const msg = workspaceMode === 'join'
+            ? `Welcome! Joined workspace successfully as Co-Admin: ${data.full_name || 'User'}`
+            : `Welcome! New workspace created and logged in as Administrator: ${data.full_name || 'User'}`;
+          showToast(msg, 'success');
           navigate('/dashboard');
         } else {
           showToast(`Account registered and logged in successfully, ${data.full_name || 'User'}!`, 'success');
@@ -106,7 +118,7 @@ const AuthPage = ({ setAuth }) => {
       <div className="glass" style={{ 
         display: 'flex',
         width: '900px', 
-        height: '580px',
+        minHeight: '580px',
         borderRadius: 'var(--radius-xl)', 
         overflow: 'hidden',
         boxShadow: '0 20px 40px rgba(60, 40, 20, 0.15)',
@@ -190,7 +202,8 @@ const AuthPage = ({ setAuth }) => {
           display: 'flex', 
           flexDirection: 'column', 
           justifyContent: 'center',
-          backgroundColor: '#FFFFFF'
+          backgroundColor: '#FFFFFF',
+          overflowY: 'auto'
         }}>
           <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
             {isLogin ? 'Welcome Back' : 'Access Request'}
@@ -282,7 +295,7 @@ const AuthPage = ({ setAuth }) => {
                 <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>Request System Role</label>
                 <select 
                   value={role} 
-                  onChange={(e) => setRole(e.target.value)}
+                  onChange={(e) => { setRole(e.target.value); setWorkspaceMode('create'); setShareCode(''); }}
                   style={{ width: '100%', height: '2.6rem', padding: '0 1rem', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}
                 >
                   <option value="cashier">Cashier (POS & Guest billing)</option>
@@ -290,6 +303,90 @@ const AuthPage = ({ setAuth }) => {
                   <option value="manager">Manager (Inventory, Staff & Supplies)</option>
                   <option value="admin">Administrator (Full Access)</option>
                 </select>
+              </div>
+            )}
+
+            {/* Workspace Mode (Admin Sign Up only) */}
+            {!isLogin && role === 'admin' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>Workspace Setup</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setWorkspaceMode('create'); setShareCode(''); }}
+                    style={{
+                      padding: '0.6rem 0.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: `2px solid ${workspaceMode === 'create' ? 'var(--primary)' : 'var(--border)'}`,
+                      background: workspaceMode === 'create' ? 'rgba(140,98,57,0.08)' : 'transparent',
+                      color: workspaceMode === 'create' ? 'var(--primary)' : 'var(--text-muted)',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Plus size={14} /> Create New
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWorkspaceMode('join')}
+                    style={{
+                      padding: '0.6rem 0.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: `2px solid ${workspaceMode === 'join' ? 'var(--primary)' : 'var(--border)'}`,
+                      background: workspaceMode === 'join' ? 'rgba(140,98,57,0.08)' : 'transparent',
+                      color: workspaceMode === 'join' ? 'var(--primary)' : 'var(--text-muted)',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Users size={14} /> Join Existing
+                  </button>
+                </div>
+                {workspaceMode === 'join' && (
+                  <div style={{ marginTop: '0.25rem' }}>
+                    <input
+                      type="text"
+                      placeholder="6-digit workspace invite code"
+                      required
+                      maxLength={6}
+                      value={shareCode}
+                      onChange={(e) => setShareCode(e.target.value.replace(/\D/g, '').substring(0, 6))}
+                      style={{
+                        width: '100%',
+                        paddingLeft: '1rem',
+                        paddingRight: '1rem',
+                        height: '2.6rem',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.3em',
+                        textAlign: 'center',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        color: 'var(--primary)'
+                      }}
+                    />
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.3rem', textAlign: 'center' }}>
+                      Ask your co-founder for their workspace invite code
+                    </p>
+                  </div>
+                )}
+                {workspaceMode === 'create' && (
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                    A new workspace will be auto-created for your café
+                  </p>
+                )}
               </div>
             )}
 

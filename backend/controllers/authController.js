@@ -10,7 +10,7 @@ const generateToken = (id, role) => {
 };
 
 export const registerUser = async (req, res) => {
-  const { email, password, full_name, role, phone } = req.body;
+  const { email, password, full_name, role, phone, share_code } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
@@ -64,60 +64,101 @@ export const registerUser = async (req, res) => {
 
     let finalWorkspaceId = null;
     if (user && targetRole === 'admin') {
-      // Automatically create a workspace for the registered admin
-      const workspaceName = `${user.full_name || 'My'}'s Workspace`;
-      let unique = false;
-      let shareCode = '';
-      let obfuscated = '';
+      if (share_code && share_code.trim().length === 6 && !isNaN(share_code.trim())) {
+        // ── JOIN EXISTING WORKSPACE as a co-admin/founder ──
+        const obfuscated = obfuscateCode(share_code.trim());
 
-      while (!unique) {
-        shareCode = Math.floor(100000 + Math.random() * 900000).toString();
-        obfuscated = obfuscateCode(shareCode);
-        
-        const { data: existing } = await supabase
+        const { data: workspace, error: wsError } = await supabase
           .from('workspaces')
-          .select('id')
+          .select('*')
           .eq('share_code', obfuscated)
           .maybeSingle();
 
-        if (!existing) {
-          unique = true;
+        if (wsError) throw wsError;
+
+        if (!workspace) {
+          // Invalid share code — roll back user creation and return error
+          await supabase.from('users').delete().eq('id', user.id);
+          return res.status(404).json({ message: 'Workspace share code not found. Please check the invite code and try again.' });
         }
+
+        // Add as owner-level member with immediate approval
+        const { error: memberError } = await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: workspace.id,
+            user_id: user.id,
+            role: 'owner',
+            status: 'approved'
+          });
+
+        if (memberError) throw memberError;
+
+        // Link user to the workspace
+        const { error: userError } = await supabase
+          .from('users')
+          .update({ workspace_id: workspace.id })
+          .eq('id', user.id);
+
+        if (userError) throw userError;
+
+        finalWorkspaceId = workspace.id;
+      } else {
+        // ── CREATE NEW WORKSPACE (original behaviour) ──
+        const workspaceName = `${user.full_name || 'My'}'s Workspace`;
+        let unique = false;
+        let shareCode = '';
+        let obfuscated = '';
+
+        while (!unique) {
+          shareCode = Math.floor(100000 + Math.random() * 900000).toString();
+          obfuscated = obfuscateCode(shareCode);
+          
+          const { data: existing } = await supabase
+            .from('workspaces')
+            .select('id')
+            .eq('share_code', obfuscated)
+            .maybeSingle();
+
+          if (!existing) {
+            unique = true;
+          }
+        }
+
+        // Create the workspace
+        const { data: workspace, error: wsError } = await supabase
+          .from('workspaces')
+          .insert({
+            workspace_name: workspaceName,
+            owner_id: user.id,
+            share_code: obfuscated
+          })
+          .select()
+          .single();
+
+        if (wsError) throw wsError;
+
+        // Register user as owner in workspace_members
+        const { error: memberError } = await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: workspace.id,
+            user_id: user.id,
+            role: 'owner'
+          });
+
+        if (memberError) throw memberError;
+
+        // Update user's active workspace_id
+        const { error: userError } = await supabase
+          .from('users')
+          .update({ workspace_id: workspace.id })
+          .eq('id', user.id);
+
+        if (userError) throw userError;
+
+        finalWorkspaceId = workspace.id;
       }
-
-      // Create the workspace
-      const { data: workspace, error: wsError } = await supabase
-        .from('workspaces')
-        .insert({
-          workspace_name: workspaceName,
-          owner_id: user.id,
-          share_code: obfuscated
-        })
-        .select()
-        .single();
-
-      if (wsError) throw wsError;
-
-      // Register user as owner in workspace_members
-      const { error: memberError } = await supabase
-        .from('workspace_members')
-        .insert({
-          workspace_id: workspace.id,
-          user_id: user.id,
-          role: 'owner'
-        });
-
-      if (memberError) throw memberError;
-
-      // Update user's active workspace_id
-      const { error: userError } = await supabase
-        .from('users')
-        .update({ workspace_id: workspace.id })
-        .eq('id', user.id);
-
-      if (userError) throw userError;
-
-      finalWorkspaceId = workspace.id;
     }
 
     if (user) {
