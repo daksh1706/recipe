@@ -365,7 +365,8 @@ const Settings = ({ userRole = 'admin', auth }) => {
       soda: 12,
       light_bites: 12,
       pasta: 12,
-      sandwich: 12
+      sandwich: 12,
+      hot_chocolate: 5
     };
   });
 
@@ -1877,6 +1878,15 @@ const Settings = ({ userRole = 'admin', auth }) => {
                       type="number" 
                       value={gstConfig.sandwich || 0} 
                       onChange={(e) => setGstConfig({...gstConfig, sandwich: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Hot Chocolate (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.hot_chocolate || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, hot_chocolate: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>

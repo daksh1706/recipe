@@ -250,7 +250,8 @@ const POS = ({ auth }) => {
     { value: 'soda', label: 'Sodas & Cold Drinks' },
     { value: 'light_bites', label: 'Light Bites' },
     { value: 'pasta', label: 'Pasta' },
-    { value: 'sandwich', label: 'Sandwiches' }
+    { value: 'sandwich', label: 'Sandwiches' },
+    { value: 'hot_chocolate', label: 'Hot Chocolate' }
   ];
 
   // 1. Fetch Menu Items — with auto-retry only for server/network errors (not auth errors)

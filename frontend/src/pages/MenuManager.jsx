@@ -165,7 +165,8 @@ const MenuManager = () => {
     { value: 'soda', label: 'Sodas & Cold Drinks' },
     { value: 'light_bites', label: 'Light Bites' },
     { value: 'pasta', label: 'Pasta' },
-    { value: 'sandwich', label: 'Sandwich' }
+    { value: 'sandwich', label: 'Sandwich' },
+    { value: 'hot_chocolate', label: 'Hot Chocolate' }
   ];
 
   // Auto-generate code on Category Change
@@ -677,6 +678,7 @@ const MenuManager = () => {
                     <option value="light_bites">Light Bites</option>
                     <option value="pasta">Pasta</option>
                     <option value="sandwich">Sandwich</option>
+                    <option value="hot_chocolate">Hot Chocolate</option>
                   </select>
                 </div>
               </div>
