@@ -1827,6 +1827,15 @@ const Settings = ({ userRole = 'admin', auth }) => {
                     />
                   </div>
                   <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Hot Chocolate (%)</label>
+                    <input 
+                      type="number" 
+                      value={gstConfig.hot_chocolate || 0} 
+                      onChange={(e) => setGstConfig({...gstConfig, hot_chocolate: parseFloat(e.target.value)})} 
+                      min="0" max="100" required 
+                    />
+                  </div>
+                  <div>
                     <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Macchiato (%)</label>
                     <input 
                       type="number" 
@@ -1886,15 +1895,6 @@ const Settings = ({ userRole = 'admin', auth }) => {
                       type="number" 
                       value={gstConfig.sandwich || 0} 
                       onChange={(e) => setGstConfig({...gstConfig, sandwich: parseFloat(e.target.value)})} 
-                      min="0" max="100" required 
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '600' }}>Hot Chocolate (%)</label>
-                    <input 
-                      type="number" 
-                      value={gstConfig.hot_chocolate || 0} 
-                      onChange={(e) => setGstConfig({...gstConfig, hot_chocolate: parseFloat(e.target.value)})} 
                       min="0" max="100" required 
                     />
                   </div>

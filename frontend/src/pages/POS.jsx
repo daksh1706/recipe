@@ -244,14 +244,14 @@ const POS = ({ auth }) => {
     { value: 'mocha', label: 'Mocha' },
     { value: 'americano', label: 'Americano' },
     { value: 'flat_white', label: 'Flat White' },
+    { value: 'hot_chocolate', label: 'Hot Chocolate' },
     { value: 'macchiato', label: 'Macchiato' },
     { value: 'frappuccino', label: 'Frappuccino' },
     { value: 'cold_brew', label: 'Cold Brews' },
     { value: 'soda', label: 'Sodas & Cold Drinks' },
     { value: 'light_bites', label: 'Light Bites' },
     { value: 'pasta', label: 'Pasta' },
-    { value: 'sandwich', label: 'Sandwiches' },
-    { value: 'hot_chocolate', label: 'Hot Chocolate' }
+    { value: 'sandwich', label: 'Sandwiches' }
   ];
 
   // 1. Fetch Menu Items — with auto-retry only for server/network errors (not auth errors)

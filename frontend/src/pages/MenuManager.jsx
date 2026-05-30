@@ -159,14 +159,14 @@ const MenuManager = () => {
     { value: 'mocha', label: 'Mocha' },
     { value: 'americano', label: 'Americano' },
     { value: 'flat_white', label: 'Flat White' },
+    { value: 'hot_chocolate', label: 'Hot Chocolate' },
     { value: 'macchiato', label: 'Macchiato' },
     { value: 'frappuccino', label: 'Frappuccino' },
     { value: 'cold_brew', label: 'Cold Brews' },
     { value: 'soda', label: 'Sodas & Cold Drinks' },
     { value: 'light_bites', label: 'Light Bites' },
     { value: 'pasta', label: 'Pasta' },
-    { value: 'sandwich', label: 'Sandwich' },
-    { value: 'hot_chocolate', label: 'Hot Chocolate' }
+    { value: 'sandwich', label: 'Sandwich' }
   ];
 
   // Auto-generate code on Category Change
@@ -671,6 +671,7 @@ const MenuManager = () => {
                     <option value="mocha">Mocha</option>
                     <option value="americano">Americano</option>
                     <option value="flat_white">Flat White</option>
+                    <option value="hot_chocolate">Hot Chocolate</option>
                     <option value="macchiato">Macchiato</option>
                     <option value="frappuccino">Frappuccino</option>
                     <option value="cold_brew">Cold Brews</option>
@@ -678,7 +679,6 @@ const MenuManager = () => {
                     <option value="light_bites">Light Bites</option>
                     <option value="pasta">Pasta</option>
                     <option value="sandwich">Sandwich</option>
-                    <option value="hot_chocolate">Hot Chocolate</option>
                   </select>
                 </div>
               </div>
