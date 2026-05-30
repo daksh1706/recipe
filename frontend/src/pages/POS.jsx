@@ -741,148 +741,147 @@ const POS = ({ auth }) => {
       format: [80, 240]
     });
 
-    doc.setFont('Helvetica', 'normal');
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8); 
     
-    // Header Cafe Letterhead details
-    doc.setFontSize(12);
-    doc.setFont('Helvetica', 'bold');
-    doc.text(storeDetails.name.toUpperCase(), 40, 12, { align: 'center' });
-    doc.setFontSize(7);
-    doc.setFont('Helvetica', 'normal');
+    let y = 10;
+    const marginLeft = 4;
     
-    // Split address dynamically if too long
-    const addrLines = doc.splitTextToSize(storeDetails.address, 70);
-    let currentY = 16;
+    const doubleLine = "==========================================";
+    const singleLine = "------------------------------------------";
+
+    // Store letterhead header
+    doc.setFontSize(11);
+    doc.setFont('courier', 'bold');
+    doc.text(storeDetails.name.toUpperCase().padStart(22, ' '), marginLeft, y);
+    y += 5;
+    
+    doc.setFontSize(7.5);
+    doc.setFont('courier', 'normal');
+    const addrLines = doc.splitTextToSize(storeDetails.address, 72);
     addrLines.forEach(line => {
-      doc.text(line, 40, currentY, { align: 'center' });
-      currentY += 3.5;
+      doc.text(line, marginLeft, y);
+      y += 3.5;
     });
     
-    doc.text(`Phone: +91 ${storeDetails.phone}  |  GSTIN: ${storeDetails.gstin}`, 40, currentY, { align: 'center' });
-    currentY += 3;
+    doc.text(`Phone: +91 ${storeDetails.phone}`, marginLeft, y);
+    y += 3.5;
+    doc.text(`GSTIN: ${storeDetails.gstin}`, marginLeft, y);
+    y += 4.5;
     
-    doc.line(5, currentY, 75, currentY); // dashed divider line
-    currentY += 4;
+    doc.text(doubleLine, marginLeft, y);
+    y += 4;
 
-    // Ticket metadata info
-    doc.setFontSize(8);
-    doc.setFont('Helvetica', 'bold');
-    const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
-    const billNo = r.orderCode ? `BILL-${r.orderCode.replace('ORD-', '')}` : 'N/A';
-    
-    doc.text(`Bill No: ${billNo}`, 5, currentY);
-    doc.text(`Order: ${r.orderCode}`, 5, currentY + 4);
-    doc.text(`Token: ${tokenNumber}`, 50, currentY + 4);
-    
-    doc.setFont('Helvetica', 'normal');
-    doc.text(`Date: ${new Date(r.createdAt || Date.now()).toLocaleString()}`, 5, currentY + 8);
-    
-    currentY += 12;
-    doc.text(`Type: ${(r.orderType || 'takeaway').toUpperCase()}`, 5, currentY);
+    const orderNo = r.orderCode || 'ORD-0000';
+    const dateStr = new Date(r.createdAt || Date.now()).toLocaleString('en-IN', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+
+    const billNo = `BILL-${orderNo.replace('ORD-', '')}`;
+    const tokenNo = orderNo.replace('ORD-', '');
+    doc.text(`Bill No   : ${billNo}`, marginLeft, y);
+    y += 3.5;
+    doc.text(`Order Code: ${orderNo} (Token: ${tokenNo})`, marginLeft, y);
+    y += 3.5;
+    doc.text(`Date      : ${dateStr}`, marginLeft, y);
+    y += 3.5;
+    doc.text(`Order Type: ${(r.orderType || 'takeaway').toUpperCase()}`, marginLeft, y);
+    y += 3.5;
     if (r.tableNumber) {
-      doc.text(`Table: #${r.tableNumber}`, 50, currentY);
+      doc.text(`Table No  : Table ${r.tableNumber}`, marginLeft, y);
+      y += 3.5;
     }
-    currentY += 4;
     
-    const guestName = r.customer ? r.customer.name : (r.customerName || r.customer_name);
+    const guestName = r.customer ? r.customer.name : (r.customerName || r.customer_name || 'Walk-in Customer');
+    doc.text(`Customer  : ${guestName}`, marginLeft, y);
+    y += 3.5;
+    
     const guestPhone = r.customer ? r.customer.phone : (r.customerPhone || r.customer_phone);
-    if (guestName || guestPhone) {
-      doc.text(`Guest: ${guestName || 'Walk-in'} (${guestPhone || ''})`, 5, currentY);
-      currentY += 4;
+    if (guestPhone) {
+      doc.text(`Cust Phone: +91 ${guestPhone}`, marginLeft, y);
+      y += 3.5;
     }
 
-    doc.line(5, currentY, 75, currentY); // divider
-    currentY += 4;
+    doc.text(singleLine, marginLeft, y);
+    y += 4;
 
-    // Itemized table header columns
-    doc.setFont('Helvetica', 'bold');
-    doc.text('Item Description', 5, currentY);
-    doc.text('Qty', 45, currentY);
-    doc.text('Price', 53, currentY);
-    doc.text('Total', 67, currentY);
-    
-    currentY += 2;
-    doc.line(5, currentY, 75, currentY); // divider
-    currentY += 4;
-    
-    // Render product items
-    doc.setFont('Helvetica', 'normal');
-    r.items.forEach(item => {
-      // Dynamic page overflow safeguard
-      if (currentY > 225) {
-        doc.addPage();
-        currentY = 10;
-        
-        // Re-draw item headers on the new page
-        doc.setFont('Helvetica', 'bold');
-        doc.text('Item Description', 5, currentY);
-        doc.text('Qty', 45, currentY);
-        doc.text('Price', 53, currentY);
-        doc.text('Total', 67, currentY);
-        currentY += 2;
-        doc.line(5, currentY, 75, currentY);
-        currentY += 4;
-        doc.setFont('Helvetica', 'normal');
+    doc.setFont('courier', 'bold');
+    doc.text("Item                    Qty  Price   Total", marginLeft, y);
+    y += 3.5;
+    doc.setFont('courier', 'normal');
+    doc.text(singleLine, marginLeft, y);
+    y += 4;
+
+    const padR = (str, len) => str.toString().padEnd(len, ' ');
+    const padL = (str, len) => str.toString().padStart(len, ' ');
+
+    r.items?.forEach(item => {
+      let itemName = item.menuItem ? item.menuItem.name : (item.name || 'Coffee Item');
+      if (itemName.length > 21) {
+        itemName = itemName.substring(0, 20) + '.';
       }
-
-      const name = item.menuItem ? item.menuItem.name : (item.name || 'Coffee Item');
-      // Truncate name if too long
-      const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
       
+      const col1 = padR(itemName, 22);
+      const col2 = padL(item.quantity.toString(), 3);
       const price = Number(item.unitPrice || item.price || 0);
       const total = Number(item.subtotal || (item.quantity * price));
+      const col3 = padL(price.toFixed(2), 7);
+      const col4 = padL(total.toFixed(2), 8);
       
-      doc.text(displayName, 5, currentY);
-      doc.text(String(item.quantity), 46, currentY);
-      doc.text(String(price.toFixed(1)), 53, currentY);
-      doc.text(String(total.toFixed(1)), 67, currentY);
-      currentY += 5;
+      doc.text(`${col1}${col2}${col3}${col4}`, marginLeft, y);
+      y += 4;
     });
 
-    doc.line(5, currentY, 75, currentY); // divider
-    currentY += 4;
+    doc.text(singleLine, marginLeft, y);
+    y += 4;
 
-    // Billing Totals summary
-    doc.text('Subtotal:', 40, currentY);
-    doc.text(String(Number(r.subtotal || 0).toFixed(2)), 67, currentY);
-    currentY += 4;
-
+    const subtotalStr = (r.subtotal || 0).toFixed(2);
+    doc.text(`Subtotal:                        ${padL(subtotalStr, 8)}`, marginLeft, y);
+    y += 4;
+    
     if (Number(r.discountAmount || 0) > 0) {
-      doc.text(`Discount (${r.discountPercent || 0}%):`, 40, currentY);
-      doc.text(`-${Number(r.discountAmount).toFixed(2)}`, 67, currentY);
-      currentY += 4;
+      const discountStr = Number(r.discountAmount).toFixed(2);
+      doc.text(`Discount (${r.discountPercent || 0}%):                 -${padL(discountStr, 8)}`, marginLeft, y);
+      y += 4;
     }
 
     const gstAmount = Number(r.gstAmount || r.taxAmount || r.gstTotal || (r.subtotal * 0.05) || 0);
-    doc.text('GST (5% Collected):', 40, currentY);
-    doc.text(String(gstAmount.toFixed(2)), 67, currentY);
-    currentY += 5;
+    const gstStr = gstAmount.toFixed(2);
+    doc.text(`GST collected:                   ${padL(gstStr, 8)}`, marginLeft, y);
+    y += 4;
 
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('GRAND TOTAL:', 35, currentY);
-    doc.text(`INR ${Number(r.grandTotal || 0).toFixed(2)}`, 67, currentY);
-    doc.setFontSize(8);
-    doc.setFont('Helvetica', 'normal');
-    currentY += 5;
+    doc.text(doubleLine, marginLeft, y);
+    y += 4;
 
-    doc.line(5, currentY, 75, currentY); // divider
-    currentY += 4;
+    doc.setFont('courier', 'bold');
+    const grandStr = Number(r.grandTotal || 0).toFixed(2);
+    doc.text(`GRAND TOTAL (INR):               ${padL(grandStr, 8)}`, marginLeft, y);
+    doc.setFont('courier', 'normal');
+    y += 4.5;
 
-    doc.text(`Payment: ${(r.paymentMethod || 'cash').toUpperCase()} (${(r.paymentStatus || 'paid').toUpperCase()})`, 5, currentY);
-    currentY += 4;
-    if ((r.paymentMethod || '').toLowerCase() === 'cash') {
-      doc.text(`Received: ${Number(r.amountReceived || r.grandTotal || 0).toFixed(2)} | Change: ${Number(r.changeToReturn || 0).toFixed(2)}`, 5, currentY);
-      currentY += 5;
+    doc.text(`Payment Method: ${(r.paymentMethod || 'cash').toUpperCase()}`, marginLeft, y);
+    y += 3.5;
+    doc.text(`Payment Status: ${(r.paymentStatus || 'paid').toUpperCase()}`, marginLeft, y);
+    y += 3.5;
+
+    if ((r.paymentMethod || '').toLowerCase() === 'cash' && r.amountReceived) {
+      const receivedStr = Number(r.amountReceived).toFixed(2);
+      const returnStr = Number(r.changeToReturn || 0).toFixed(2);
+      doc.text(`Amount Received:                  ${padL(receivedStr, 8)}`, marginLeft, y);
+      y += 3.5;
+      doc.text(`Change Returned:                  ${padL(returnStr, 8)}`, marginLeft, y);
+      y += 4.5;
     }
 
-    // Thank you message
-    doc.setFont('Helvetica', 'bold');
-    doc.text('THANK YOU FOR YOUR VISIT!', 40, currentY, { align: 'center' });
-    currentY += 4;
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(6.5);
-    doc.text('Brewed with Love. Powered by CRFTD POS.', 40, currentY, { align: 'center' });
+    doc.text(doubleLine, marginLeft, y);
+    y += 5;
+
+    doc.text("        Thank you! Please visit again.", marginLeft, y);
+    y += 4;
+    doc.text("        System Powered by CRFTD POS", marginLeft, y);
+    y += 4;
+    doc.text(doubleLine, marginLeft, y);
 
     doc.save(`Bill_${r.orderCode}.pdf`);
     showToast('Bill PDF downloaded!', 'success');
