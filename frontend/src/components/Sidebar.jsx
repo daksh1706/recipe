@@ -158,7 +158,7 @@ const Sidebar = ({ setAuth, role, auth, handleLogout }) => {
     { to: '/ledger', icon: <BookOpen size={18} />, label: 'Order Ledger', roles: ['admin', 'manager', 'cashier'] },
     { to: '/expenses', icon: <DollarSign size={18} />, label: 'Expenses Tracker', roles: ['admin', 'manager'] },
     { to: '/reports', icon: <BarChart3 size={18} />, label: 'Financial Reports', roles: ['admin'] },
-    { to: '/staff', icon: <Calendar size={18} />, label: 'Staff & Roster', roles: ['admin', 'manager'] },
+    { to: '/staff', icon: <Calendar size={18} />, label: 'Staff & Roster', roles: ['admin', 'manager', 'barista', 'cashier'] },
     { to: '/waste', icon: <AlertTriangle size={18} />, label: 'Spoilage Waste Log', roles: ['admin', 'manager', 'barista'] },
     { to: '/feedback', icon: <MessageSquare size={18} />, label: 'Reviews Feedback', roles: ['admin', 'manager'] },
     { to: '/settings', icon: <SettingsIcon size={18} />, label: 'Configuration', roles: ['admin', 'manager'] }

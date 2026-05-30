@@ -352,7 +352,7 @@ const Settings = ({ userRole = 'admin', auth }) => {
   // GST configurations
   const [gstConfig, setGstConfig] = useState(() => {
     const saved = localStorage.getItem('gstConfig');
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
       espresso: 5,
       latte: 5,
       cappuccino: 5,
@@ -368,6 +368,14 @@ const Settings = ({ userRole = 'admin', auth }) => {
       sandwich: 12,
       hot_chocolate: 5
     };
+    if (saved) {
+      try {
+        return { ...defaults, ...JSON.parse(saved) };
+      } catch (e) {
+        return defaults;
+      }
+    }
+    return defaults;
   });
 
   // Allowed discount percentages
