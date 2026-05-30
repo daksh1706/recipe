@@ -202,7 +202,7 @@ const OrderLedger = () => {
     });
 
     const billNo = `BILL-${orderNo.replace('ORD-', '')}`;
-    const tokenNo = orderNo.replace('ORD-', '');
+    const tokenNo = orderNo.split('-').pop();
     doc.text(`Bill No   : ${billNo}`, marginLeft, y);
     y += 3.5;
     doc.text(`Order Code: ${orderNo} (Token: ${tokenNo})`, marginLeft, y);

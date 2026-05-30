@@ -556,7 +556,7 @@ const POS = ({ auth }) => {
     iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:80mm;height:1px;border:none;visibility:hidden;';
     document.body.appendChild(iframe);
 
-    const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
+    const tokenNumber = r.orderCode ? r.orderCode.split('-').pop() : 'N/A';
 
     const itemsHtml = r.items.map(item => {
       const name = item.menuItem ? item.menuItem.name : (item.name || 'Coffee Item');
@@ -779,7 +779,7 @@ const POS = ({ auth }) => {
     });
 
     const billNo = `BILL-${orderNo.replace('ORD-', '')}`;
-    const tokenNo = orderNo.replace('ORD-', '');
+    const tokenNo = orderNo.split('-').pop();
     doc.text(`Bill No   : ${billNo}`, marginLeft, y);
     y += 3.5;
     doc.text(`Order Code: ${orderNo} (Token: ${tokenNo})`, marginLeft, y);

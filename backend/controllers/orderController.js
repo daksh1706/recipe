@@ -1,20 +1,28 @@
 import { supabase } from '../config/supabase.js';
 
-// Helper to generate ORD-0001, ORD-0002 format
+// Helper to generate daily resetting order codes, e.g. ORD-20260530-0001
 const generateOrderCode = async (workspaceId) => {
   try {
+    // Get current date string in IST (Indian Standard Time) where the coffee shop operates
+    const localDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // "YYYY-MM-DD"
+    const datePrefix = localDateStr.replace(/-/g, ''); // "YYYYMMDD", e.g. "20260530"
+    const prefix = `ORD-${datePrefix}-`;
+
     const { count, error } = await supabase
       .from('orders')
       .select('id', { count: 'exact', head: true })
-      .eq('workspace_id', workspaceId);
+      .eq('workspace_id', workspaceId)
+      .like('order_code', `${prefix}%`);
 
     if (error) throw error;
 
     const nextNum = (count || 0) + 1;
-    return `ORD-${nextNum.toString().padStart(4, '0')}`;
+    return `${prefix}${nextNum.toString().padStart(4, '0')}`;
   } catch (error) {
     console.error("Error generating order code:", error.message);
-    return `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Safe unique fallback including date to prevent Supabase UNIQUE constraint violations
+    const datePrefix = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).replace(/-/g, '');
+    return `ORD-${datePrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
   }
 };
 
