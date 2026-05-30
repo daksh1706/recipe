@@ -68,11 +68,15 @@ const AuthPage = ({ setAuth }) => {
       } else {
         localStorage.setItem('userInfo', JSON.stringify(data));
         setAuth(data);
-        if (data.role === 'admin') {
-          const msg = workspaceMode === 'join'
-            ? `Welcome! Joined workspace successfully as Co-Admin: ${data.full_name || 'User'}`
-            : `Welcome! New workspace created and logged in as Administrator: ${data.full_name || 'User'}`;
-          showToast(msg, 'success');
+        if (data.role === 'admin' && data.pending) {
+          // Co-founder join request submitted — awaiting owner approval
+          showToast(
+            `Join request sent to workspace "${data.pending_workspace_name || 'the workspace'}". Please wait for the owner to approve your access.`,
+            'info'
+          );
+          navigate('/dashboard'); // App will redirect to WorkspaceSelector since workspace_id is null
+        } else if (data.role === 'admin') {
+          showToast(`Welcome! New workspace created and logged in as Administrator: ${data.full_name || 'User'}`, 'success');
           navigate('/dashboard');
         } else {
           showToast(`Account registered and logged in successfully, ${data.full_name || 'User'}!`, 'success');

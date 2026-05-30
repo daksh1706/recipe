@@ -82,27 +82,23 @@ export const registerUser = async (req, res) => {
           return res.status(404).json({ message: 'Workspace share code not found. Please check the invite code and try again.' });
         }
 
-        // Add as owner-level member with immediate approval
+        // Add as admin-role member in PENDING state — owner must approve
         const { error: memberError } = await supabase
           .from('workspace_members')
           .insert({
             workspace_id: workspace.id,
             user_id: user.id,
-            role: 'owner',
-            status: 'approved'
+            role: 'admin',
+            status: 'pending'
           });
 
         if (memberError) throw memberError;
 
-        // Link user to the workspace
-        const { error: userError } = await supabase
-          .from('users')
-          .update({ workspace_id: workspace.id })
-          .eq('id', user.id);
-
-        if (userError) throw userError;
-
-        finalWorkspaceId = workspace.id;
+        // Do NOT set workspace_id yet — will be set when owner approves
+        // Signal to the response that this is a pending join
+        finalWorkspaceId = null;
+        user._pendingJoin = true;
+        user._pendingWorkspaceName = workspace.workspace_name;
       } else {
         // ── CREATE NEW WORKSPACE (original behaviour) ──
         const workspaceName = `${user.full_name || 'My'}'s Workspace`;
@@ -170,6 +166,8 @@ export const registerUser = async (req, res) => {
         status: user.status,
         workspace_id: finalWorkspaceId || user.workspace_id || null,
         token: generateToken(user.id, user.role),
+        // Signals a pending co-founder join request
+        ...(user._pendingJoin ? { pending: true, pending_workspace_name: user._pendingWorkspaceName } : {})
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
