@@ -74,6 +74,12 @@ function AccessDenied() {
   );
 }
 
+// Access gated route component to prevent unauthorised role access
+function GuardRoute({ allowed, userRole, element }) {
+  const isAllowed = allowed.includes((userRole || '').toLowerCase());
+  return isAllowed ? element : <AccessDenied />;
+}
+
 function AppInner() {
   const [auth, setAuth] = useState(() => {
     const saved = localStorage.getItem('userInfo');
@@ -212,14 +218,6 @@ function AppInner() {
   // Define Gated Route Protection Guards based on role
   const userRole = (auth.role || '').toLowerCase(); // admin, manager, barista, cashier, waiter
 
-  const isRole = (allowed) => {
-    return allowed.includes(userRole);
-  };
-
-  const GuardRoute = ({ allowed, element }) => {
-    return isRole(allowed) ? element : <AccessDenied />;
-  };
-
   return (
     <ToastContext.Provider value={{ showToast }}>
       <ThemeContext.Provider value={{ darkMode, toggleTheme }}>
@@ -233,77 +231,77 @@ function AppInner() {
 
                 {/* Dashboard (Module 1): admin, manager */}
                 <Route path="/dashboard" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<Dashboard />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<Dashboard />} />
                 } />
 
                 {/* POS / Order Entry (Module 4): admin, manager, barista, cashier */}
                 <Route path="/pos" element={
-                  <GuardRoute allowed={['admin', 'manager', 'barista', 'cashier']} element={<POS auth={auth} />} />
+                  <GuardRoute allowed={['admin', 'manager', 'barista', 'cashier']} userRole={userRole} element={<POS auth={auth} />} />
                 } />
 
                 {/* Menu Manager (Module 2): admin, manager */}
                 <Route path="/menu" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<MenuManager />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<MenuManager />} />
                 } />
 
                 {/* Recipe Studio (Module 3): admin, manager, barista */}
                 <Route path="/recipes" element={
-                  <GuardRoute allowed={['admin', 'manager', 'barista']} element={<RecipeManager />} />
+                  <GuardRoute allowed={['admin', 'manager', 'barista']} userRole={userRole} element={<RecipeManager />} />
                 } />
 
                 {/* Inventory Stock Dashboard (Module 8): admin, manager, barista */}
                 <Route path="/inventory" element={
-                  <GuardRoute allowed={['admin', 'manager', 'barista']} element={<InventoryDashboard userRole={userRole} />} />
+                  <GuardRoute allowed={['admin', 'manager', 'barista']} userRole={userRole} element={<InventoryDashboard userRole={userRole} />} />
                 } />
 
                 {/* Supplier Hub (Module 9): admin, manager */}
                 <Route path="/suppliers" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<Suppliers />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<Suppliers />} />
                 } />
 
                 {/* Customers loyalty profile (Module 7): admin, manager, cashier */}
                 <Route path="/customers" element={
-                  <GuardRoute allowed={['admin', 'manager', 'cashier']} element={<Customers />} />
+                  <GuardRoute allowed={['admin', 'manager', 'cashier']} userRole={userRole} element={<Customers />} />
                 } />
 
                 {/* Order Ledger (Module 6): admin, manager, cashier */}
                 <Route path="/ledger" element={
-                  <GuardRoute allowed={['admin', 'manager', 'cashier']} element={<OrderLedger />} />
+                  <GuardRoute allowed={['admin', 'manager', 'cashier']} userRole={userRole} element={<OrderLedger />} />
                 } />
 
                 {/* Active orders monitor: admin, manager, barista, cashier */}
                 <Route path="/orders" element={
-                  <GuardRoute allowed={['admin', 'manager', 'barista', 'cashier']} element={<ActiveOrders />} />
+                  <GuardRoute allowed={['admin', 'manager', 'barista', 'cashier']} userRole={userRole} element={<ActiveOrders />} />
                 } />
 
                 {/* Outflow expenses tracker (Module 10): admin, manager */}
                 <Route path="/expenses" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<Expenses />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<Expenses />} />
                 } />
 
                 {/* Income & Profit Reports (Module 11): admin only */}
                 <Route path="/reports" element={
-                  <GuardRoute allowed={['admin']} element={<Reports />} />
+                  <GuardRoute allowed={['admin']} userRole={userRole} element={<Reports />} />
                 } />
 
                 {/* Roster & Staff Calendar (Module 12): admin, manager */}
                 <Route path="/staff" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<StaffManager />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<StaffManager />} />
                 } />
 
                 {/* Waste Spoilage logs (Module 13): admin, manager, barista */}
                 <Route path="/waste" element={
-                  <GuardRoute allowed={['admin', 'manager', 'barista']} element={<WasteLog />} />
+                  <GuardRoute allowed={['admin', 'manager', 'barista']} userRole={userRole} element={<WasteLog />} />
                 } />
 
                 {/* Customer Reviews Feedback (Module 14): admin, manager */}
                 <Route path="/feedback" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<Feedback />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<Feedback />} />
                 } />
 
                 {/* Configuration Settings (Module 15): admin, manager */}
                 <Route path="/settings" element={
-                  <GuardRoute allowed={['admin', 'manager']} element={<Settings userRole={userRole} auth={auth} />} />
+                  <GuardRoute allowed={['admin', 'manager']} userRole={userRole} element={<Settings userRole={userRole} auth={auth} />} />
                 } />
 
                 <Route path="*" element={<Navigate to="/" replace />} />

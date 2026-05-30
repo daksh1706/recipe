@@ -25,7 +25,7 @@ async function fixConstraints() {
     `ALTER TABLE recipe_ingredients ADD CONSTRAINT recipe_ingredients_unit_check CHECK (unit IN ('ml', 'l', 'g', 'kg', 'pinch', 'piece', 'tsp', 'tbsp', 'cup', 'slice'))`,
     // Fix menu_items category constraint
     `ALTER TABLE menu_items DROP CONSTRAINT IF EXISTS menu_items_category_check`,
-    `ALTER TABLE menu_items ADD CONSTRAINT menu_items_category_check CHECK (category IN ('espresso', 'latte', 'cappuccino', 'mocha', 'americano', 'flat_white', 'macchiato', 'frappuccino', 'cold_brew', 'soda', 'light_bites'))`,
+    `ALTER TABLE menu_items ADD CONSTRAINT menu_items_category_check CHECK (category IN ('espresso', 'latte', 'cappuccino', 'mocha', 'americano', 'flat_white', 'macchiato', 'frappuccino', 'cold_brew', 'soda', 'light_bites', 'pasta'))`,
   ];
 
   for (const sql of sqlStatements) {

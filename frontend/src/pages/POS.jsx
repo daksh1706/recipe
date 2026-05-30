@@ -168,6 +168,30 @@ const getNutrition = (itemName = '') => {
 const POS = ({ auth }) => {
   const { showToast } = useContext(ToastContext);
   
+  // Retrieve store profile details from localStorage for receipt generation
+  const storeDetails = (() => {
+    try {
+      const saved = localStorage.getItem('storeDetails');
+      return saved ? JSON.parse(saved) : {
+        name: 'CRFTD Coffee House',
+        gstin: '27CRFTD0000A1Z5',
+        address: 'Premium Crafted Experience, 123 Espresso Avenue',
+        phone: '9876543210',
+        email: 'contact@crftdcoffee.com',
+        logoUrl: ''
+      };
+    } catch {
+      return {
+        name: 'CRFTD Coffee House',
+        gstin: '27CRFTD0000A1Z5',
+        address: 'Premium Crafted Experience, 123 Espresso Avenue',
+        phone: '9876543210',
+        email: 'contact@crftdcoffee.com',
+        logoUrl: ''
+      };
+    }
+  })();
+  
   // Data State
   const [menuItems, setMenuItems] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
@@ -224,7 +248,8 @@ const POS = ({ auth }) => {
     { value: 'frappuccino', label: 'Frappuccino' },
     { value: 'cold_brew', label: 'Cold Brews' },
     { value: 'soda', label: 'Sodas & Cold Drinks' },
-    { value: 'light_bites', label: 'Light Bites' }
+    { value: 'light_bites', label: 'Light Bites' },
+    { value: 'pasta', label: 'Pasta' }
   ];
 
   // 1. Fetch Menu Items — with auto-retry only for server/network errors (not auth errors)
@@ -534,7 +559,7 @@ const POS = ({ auth }) => {
     const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
 
     const itemsHtml = r.items.map(item => {
-      const name = item.menuItem ? item.menuItem.name : 'Coffee Item';
+      const name = item.menuItem ? item.menuItem.name : (item.name || 'Coffee Item');
       const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
       const price = Number(item.unitPrice || item.price || 0).toFixed(2);
       const total = Number(item.subtotal || (item.quantity * (item.unitPrice || item.price || 0))).toFixed(2);
@@ -555,9 +580,9 @@ const POS = ({ auth }) => {
       `;
     }).join('');
 
-    const discountRow = Number(r.discountAmount) > 0 ? `
+    const discountRow = Number(r.discountAmount || 0) > 0 ? `
       <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-        <span>Discount (${r.discountPercent}%):</span>
+        <span>Discount (${r.discountPercent || 0}%):</span>
         <span>-₹${Number(r.discountAmount).toFixed(2)}</span>
       </div>
     ` : '';
@@ -565,7 +590,7 @@ const POS = ({ auth }) => {
     const cashRow = r.paymentMethod === 'cash' ? `
       <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
         <span>Received:</span>
-        <span>₹${Number(r.amountReceived || r.grandTotal).toFixed(2)}</span>
+        <span>₹${Number(r.amountReceived || r.grandTotal || 0).toFixed(2)}</span>
       </div>
       <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
         <span>Change:</span>
@@ -575,7 +600,7 @@ const POS = ({ auth }) => {
 
     const customerRow = r.customer ? `
       <div style="margin-bottom: 4px;">Guest: ${r.customer.name} (${r.customer.phone})</div>
-    ` : (r.customerPhone ? `<div style="margin-bottom: 4px;">Guest: ${r.customerName || 'Walk-in'} (${r.customerPhone})</div>` : '');
+    ` : ((r.customerPhone || r.customer_phone) ? `<div style="margin-bottom: 4px;">Guest: ${r.customerName || r.customer_name || 'Walk-in'} (${r.customerPhone || r.customer_phone})</div>` : '');
 
     const tableRow = r.tableNumber ? `
       <span>Table: #${r.tableNumber}</span>
@@ -607,17 +632,17 @@ const POS = ({ auth }) => {
         </head>
         <body>
           <div class="center">
-            <div class="header-title">CRFTD COFFEE SHOP</div>
-            <div style="font-size: 9px; margin-bottom: 2px;">101 Gourmet Lane, Coffee Hills, IN</div>
-            <div style="font-size: 9px; margin-bottom: 2px;">Phone: +91 98765 43210</div>
-            <div style="font-size: 9px;">GSTIN: 29AAAAA1111A1Z1</div>
+            <div class="header-title">${storeDetails.name.toUpperCase()}</div>
+            <div style="font-size: 9px; margin-bottom: 2px;">${storeDetails.address}</div>
+            <div style="font-size: 9px; margin-bottom: 2px;">Phone: +91 ${storeDetails.phone}</div>
+            <div style="font-size: 9px;">GSTIN: ${storeDetails.gstin}</div>
           </div>
           
           <div class="divider"></div>
           
           <div class="center" style="margin: 6px 0;">
             <span style="font-size: 13px; font-weight: bold; border: 1px double #000; padding: 2px 8px; display: inline-block;">
-              KITCHEN TOKEN: ${tokenNumber}
+               KITCHEN TOKEN: ${tokenNumber}
             </span>
           </div>
           
@@ -650,19 +675,19 @@ const POS = ({ auth }) => {
           
           <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
             <span>Subtotal:</span>
-            <span>₹${Number(r.subtotal).toFixed(2)}</span>
+            <span>₹${Number(r.subtotal || 0).toFixed(2)}</span>
           </div>
           
           ${discountRow}
           
           <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
             <span>GST (5%):</span>
-            <span>₹${Number(r.gstAmount || r.gstTotal || (r.subtotal * 0.05)).toFixed(2)}</span>
+            <span>₹${Number(r.gstAmount || r.taxAmount || r.gstTotal || (r.subtotal * 0.05) || 0).toFixed(2)}</span>
           </div>
           
           <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 4px; margin-bottom: 4px;">
             <span>GRAND TOTAL:</span>
-            <span>₹${Number(r.grandTotal).toFixed(2)}</span>
+            <span>₹${Number(r.grandTotal || 0).toFixed(2)}</span>
           </div>
           
           <div class="divider"></div>
@@ -683,8 +708,6 @@ const POS = ({ auth }) => {
           <div class="center" style="font-size: 8px;">
             Brewed with Love. Powered by CRFTD POS.
           </div>
-          
-          <script>window.onload=function(){window.print();}</script>
         </body>
       </html>
     `;
@@ -694,17 +717,16 @@ const POS = ({ auth }) => {
     iframeDoc.write(htmlContent);
     iframeDoc.close();
 
-    // Wait for iframe to load then trigger print
-    iframe.onload = () => {
+    // Workaround for dynamic document load printing to avoid silent iframe bugs
+    setTimeout(() => {
       try {
         iframe.contentWindow.focus();
         iframe.contentWindow.print();
       } catch(e) {
         showToast('Print failed — please use Download PDF instead', 'warning');
       }
-      // Remove iframe after a delay
       setTimeout(() => { if (iframe.parentNode) iframe.remove(); }, 3000);
-    };
+    }, 200);
   };
 
   // 6b. Thermal PDF Generator (jsPDF) using Coffee Shop Theme Palette
@@ -712,11 +734,11 @@ const POS = ({ auth }) => {
     if (!activeReceipt) return;
     const r = activeReceipt;
 
-    // Create a 80mm thermal receipt width format [80mm, 200mm] -> converted to points
+    // Create a 80mm thermal receipt width format [80mm, 240mm] -> converted to points
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [80, 220]
+      format: [80, 240]
     });
 
     doc.setFont('Helvetica', 'normal');
@@ -724,13 +746,23 @@ const POS = ({ auth }) => {
     // Header Cafe Letterhead details
     doc.setFontSize(12);
     doc.setFont('Helvetica', 'bold');
-    doc.text('CRFTD COFFEE SHOP', 40, 12, { align: 'center' });
+    doc.text(storeDetails.name.toUpperCase(), 40, 12, { align: 'center' });
     doc.setFontSize(7);
     doc.setFont('Helvetica', 'normal');
-    doc.text('101 Gourmet Lane, Coffee Hills, IN', 40, 16, { align: 'center' });
-    doc.text('Phone: +91 98765 43210  |  GSTIN: 29AAAAA1111A1Z1', 40, 19, { align: 'center' });
     
-    doc.line(5, 22, 75, 22); // dashed divider line
+    // Split address dynamically if too long
+    const addrLines = doc.splitTextToSize(storeDetails.address, 70);
+    let currentY = 16;
+    addrLines.forEach(line => {
+      doc.text(line, 40, currentY, { align: 'center' });
+      currentY += 3.5;
+    });
+    
+    doc.text(`Phone: +91 ${storeDetails.phone}  |  GSTIN: ${storeDetails.gstin}`, 40, currentY, { align: 'center' });
+    currentY += 3;
+    
+    doc.line(5, currentY, 75, currentY); // dashed divider line
+    currentY += 4;
 
     // Ticket metadata info
     doc.setFontSize(8);
@@ -738,22 +770,24 @@ const POS = ({ auth }) => {
     const tokenNumber = r.orderCode ? r.orderCode.replace('ORD-', '') : 'N/A';
     const billNo = r.orderCode ? `BILL-${r.orderCode.replace('ORD-', '')}` : 'N/A';
     
-    doc.text(`Bill No: ${billNo}`, 5, 27);
-    doc.text(`Order: ${r.orderCode}`, 5, 31);
-    doc.text(`Token: ${tokenNumber}`, 50, 31);
+    doc.text(`Bill No: ${billNo}`, 5, currentY);
+    doc.text(`Order: ${r.orderCode}`, 5, currentY + 4);
+    doc.text(`Token: ${tokenNumber}`, 50, currentY + 4);
     
     doc.setFont('Helvetica', 'normal');
-    doc.text(`Date: ${new Date(r.createdAt).toLocaleString()}`, 5, 35);
+    doc.text(`Date: ${new Date(r.createdAt || Date.now()).toLocaleString()}`, 5, currentY + 8);
     
-    let currentY = 39;
-    doc.text(`Type: ${r.orderType?.toUpperCase()}`, 5, currentY);
+    currentY += 12;
+    doc.text(`Type: ${(r.orderType || 'takeaway').toUpperCase()}`, 5, currentY);
     if (r.tableNumber) {
       doc.text(`Table: #${r.tableNumber}`, 50, currentY);
     }
     currentY += 4;
     
-    if (r.customer) {
-      doc.text(`Guest: ${r.customer.name} (${r.customer.phone})`, 5, currentY);
+    const guestName = r.customer ? r.customer.name : (r.customerName || r.customer_name);
+    const guestPhone = r.customer ? r.customer.phone : (r.customerPhone || r.customer_phone);
+    if (guestName || guestPhone) {
+      doc.text(`Guest: ${guestName || 'Walk-in'} (${guestPhone || ''})`, 5, currentY);
       currentY += 4;
     }
 
@@ -773,62 +807,82 @@ const POS = ({ auth }) => {
     
     // Render product items
     doc.setFont('Helvetica', 'normal');
-    let y = currentY;
     r.items.forEach(item => {
-      const name = item.menuItem ? item.menuItem.name : 'Coffee Item';
+      // Dynamic page overflow safeguard
+      if (currentY > 225) {
+        doc.addPage();
+        currentY = 10;
+        
+        // Re-draw item headers on the new page
+        doc.setFont('Helvetica', 'bold');
+        doc.text('Item Description', 5, currentY);
+        doc.text('Qty', 45, currentY);
+        doc.text('Price', 53, currentY);
+        doc.text('Total', 67, currentY);
+        currentY += 2;
+        doc.line(5, currentY, 75, currentY);
+        currentY += 4;
+        doc.setFont('Helvetica', 'normal');
+      }
+
+      const name = item.menuItem ? item.menuItem.name : (item.name || 'Coffee Item');
       // Truncate name if too long
       const displayName = name.length > 20 ? name.substring(0, 18) + '..' : name;
       
-      doc.text(displayName, 5, y);
-      doc.text(String(item.quantity), 46, y);
-      doc.text(String(Number(item.unitPrice).toFixed(1)), 53, y);
-      doc.text(String(Number(item.subtotal).toFixed(1)), 67, y);
-      y += 5;
+      const price = Number(item.unitPrice || item.price || 0);
+      const total = Number(item.subtotal || (item.quantity * price));
+      
+      doc.text(displayName, 5, currentY);
+      doc.text(String(item.quantity), 46, currentY);
+      doc.text(String(price.toFixed(1)), 53, currentY);
+      doc.text(String(total.toFixed(1)), 67, currentY);
+      currentY += 5;
     });
 
-    doc.line(5, y, 75, y); // divider
-    y += 4;
+    doc.line(5, currentY, 75, currentY); // divider
+    currentY += 4;
 
     // Billing Totals summary
-    doc.text('Subtotal:', 40, y);
-    doc.text(String(Number(r.subtotal).toFixed(2)), 67, y);
-    y += 4;
+    doc.text('Subtotal:', 40, currentY);
+    doc.text(String(Number(r.subtotal || 0).toFixed(2)), 67, currentY);
+    currentY += 4;
 
-    if (Number(r.discountAmount) > 0) {
-      doc.text(`Discount (${r.discountPercent}%):`, 40, y);
-      doc.text(`-${Number(r.discountAmount).toFixed(2)}`, 67, y);
-      y += 4;
+    if (Number(r.discountAmount || 0) > 0) {
+      doc.text(`Discount (${r.discountPercent || 0}%):`, 40, currentY);
+      doc.text(`-${Number(r.discountAmount).toFixed(2)}`, 67, currentY);
+      currentY += 4;
     }
 
-    doc.text('GST (5% Collected):', 40, y);
-    doc.text(String(Number(r.gstAmount).toFixed(2)), 67, y);
-    y += 5;
+    const gstAmount = Number(r.gstAmount || r.taxAmount || r.gstTotal || (r.subtotal * 0.05) || 0);
+    doc.text('GST (5% Collected):', 40, currentY);
+    doc.text(String(gstAmount.toFixed(2)), 67, currentY);
+    currentY += 5;
 
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('GRAND TOTAL:', 35, y);
-    doc.text(`INR ${Number(r.grandTotal).toFixed(2)}`, 67, y);
+    doc.text('GRAND TOTAL:', 35, currentY);
+    doc.text(`INR ${Number(r.grandTotal || 0).toFixed(2)}`, 67, currentY);
     doc.setFontSize(8);
     doc.setFont('Helvetica', 'normal');
-    y += 5;
+    currentY += 5;
 
-    doc.line(5, y, 75, y); // divider
-    y += 4;
+    doc.line(5, currentY, 75, currentY); // divider
+    currentY += 4;
 
-    doc.text(`Payment: ${r.paymentMethod?.toUpperCase()} (${r.paymentStatus?.toUpperCase()})`, 5, y);
-    y += 4;
-    if (r.paymentMethod === 'cash') {
-      doc.text(`Received: ${Number(r.amountReceived).toFixed(2)} | Change: ${Number(r.changeToReturn).toFixed(2)}`, 5, y);
-      y += 5;
+    doc.text(`Payment: ${(r.paymentMethod || 'cash').toUpperCase()} (${(r.paymentStatus || 'paid').toUpperCase()})`, 5, currentY);
+    currentY += 4;
+    if ((r.paymentMethod || '').toLowerCase() === 'cash') {
+      doc.text(`Received: ${Number(r.amountReceived || r.grandTotal || 0).toFixed(2)} | Change: ${Number(r.changeToReturn || 0).toFixed(2)}`, 5, currentY);
+      currentY += 5;
     }
 
     // Thank you message
     doc.setFont('Helvetica', 'bold');
-    doc.text('THANK YOU FOR YOUR VISIT!', 40, y, { align: 'center' });
-    y += 4;
+    doc.text('THANK YOU FOR YOUR VISIT!', 40, currentY, { align: 'center' });
+    currentY += 4;
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(6.5);
-    doc.text('Brewed with Love. Powered by CRFTD POS.', 40, y, { align: 'center' });
+    doc.text('Brewed with Love. Powered by CRFTD POS.', 40, currentY, { align: 'center' });
 
     doc.save(`Bill_${r.orderCode}.pdf`);
     showToast('Bill PDF downloaded!', 'success');
